@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Smart Mirror Control</title>
+	<style>
+		body {
+			background-color: #111;
+			color: white;
+			font-family: "URW Gothic L", sans-serif;
+			text-align: center;
+			padding-top: 60px;
+		}
+		a.button {
+			display: block;
+			width: 250px;
+			margin: 20px auto;
+			padding: 15px;
+			background-color: #333;
+			color: white;
+			text-decoration: none;
+			border-radius: 8px;
+			font-size: 20px;
+			transition: background 0.3s;
+		}
+		a.button:hover {
+			background-color: #555;
+		}
+	</style>
+</head>
+<body>
+	<h1>Mirror Control Panel</h1>
+	<a class="button" href="{{ url_for('poems') }}">📜 Poems</a>
+	<a class="button" href="{{ url_for('reminders_page') }}">📝 Reminders</a>
+	<a class="button" href="{{ url_for('calendar') }}">📅 Calendar</a>
+	<a class="button" href="{{ url_for('missyou') }}">💌 I Miss You</a>
+</body>
+</html>
