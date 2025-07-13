@@ -207,7 +207,8 @@ def rotate_poem():
 
 def fade_out_poem(new_poem, step=0):
 	if step > 10:
-		fade_in_poem(new_poem, step=0)
+		label_poem.config(text=new_poem)
+		fade_in_poem(new_poem)
 		return
 
 	fade = hex(int(255 * (1 - step / 10)))[2:].zfill(2)
@@ -217,7 +218,6 @@ def fade_out_poem(new_poem, step=0):
 
 def fade_in_poem(new_poem, step=0):
 	if step > 10:
-		label_poem.config(text=new_poem)
 		return
 
 	fade = hex(int(255 * (step / 10)))[2:].zfill(2)
@@ -251,7 +251,7 @@ def check_override_loop():
 	if override_msg != current_override_msg:
 		current_override_msg = override_msg
 		if override_msg:
-			fade_in_poem(override_msg)
+			fade-out_poem(override_msg)
 		else:
 			rotate_poem() # resume poem rotation if override is gone
 
