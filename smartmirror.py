@@ -207,8 +207,7 @@ def rotate_poem():
 
 def fade_out_poem(new_poem, step=0):
 	if step > 10:
-		label_poem.config(text=new_poem)
-		fade_in_poem()
+		fade_in_poem(new_poem, step=0)
 		return
 
 	fade = hex(int(255 * (1 - step / 10)))[2:].zfill(2)
@@ -216,17 +215,19 @@ def fade_out_poem(new_poem, step=0):
 	label_poem.config(fg=color)
 	root.after(30, lambda: fade_out_poem(new_poem, step + 1))
 
-def fade_in_poem(new_poem, step=0, font=None):
+def fade_in_poem(new_poem, step=0):
 	if step > 10:
-		root.after(300000, rotate_poem)
+		label_poem.config(text=new_poem)
 		return
 
 	fade = hex(int(255 * (step / 10)))[2:].zfill(2)
 	color = f"#{fade}{fade}{fade}"
-	if font:
-		label_poem.config(fg=color, font=font, justify="center", anchor="center")
-	else:
-		label_poem.config(fg=color)
+	label_poem.config(
+		fg=color,
+		font=("Lucida Calligraphy", 40, "italic"),
+		justify="center",
+		anchor="center"
+	)
 	root.after(30, lambda: fade_in_poem(new_poem, step + 1, font))
 
 
