@@ -153,11 +153,6 @@ def get_override_message():
 	return ""
 
 def rotate_poem():
-	override_msg = get_override_message()
-	if override_msg:
-		label_poem.config(text=override_msg)
-		return
-
 	global poem_pool, shown_poems
 
 	try:
@@ -251,7 +246,7 @@ def check_override_loop():
 	if override_msg != current_override_msg:
 		current_override_msg = override_msg
 		if override_msg:
-			fade-out_poem(override_msg)
+			fade-out_poem(current_override_msg)
 		else:
 			rotate_poem() # resume poem rotation if override is gone
 
