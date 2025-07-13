@@ -141,10 +141,10 @@ shown_poems = []
 
 def get_override_message():
 	try:
-		response = requests.get("https://smartmirror-app.onrender.com/override", verify=False)
+		response = requests.get("https://smartmirror-app.onrender.com/override")
 		if response.status_code == 200:
 			data = response.json()
-			return data.get("override", "")
+			return
 		else:
 			print("Failed to fetch override message. status: ", response.status_code)
 			return ""
@@ -154,7 +154,6 @@ def get_override_message():
 
 def rotate_poem():
 	override_msg = get_override_message()
-	print(f"Override message: '{override_msg}'")
 	if override_msg:
 		label_poem.config(text=override_msg)
 		return
@@ -217,15 +216,18 @@ def fade_out_poem(new_poem, step=0):
 	label_poem.config(fg=color)
 	root.after(30, lambda: fade_out_poem(new_poem, step + 1))
 
-def fade_in_poem(step=0):
+def fade_in_poem(new_poem, step=0, font=None):
 	if step > 10:
 		root.after(300000, rotate_poem)
 		return
 
 	fade = hex(int(255 * (step / 10)))[2:].zfill(2)
 	color = f"#{fade}{fade}{fade}"
-	label_poem.config(fg=color)
-	root.after(30, lambda: fade_in_poem(step + 1))
+	if font:
+		label_poem.config(fg=color, font=font, justify="center", anchor="center")
+	else:
+		label_poem.config(fg=color)
+	root.after(30, lambda: fade_in_poem(new_poem, step + 1, font))
 
 
 
@@ -238,7 +240,7 @@ def check_override_loop():
 	if override_msg != current_override_msg:
 		current_override_msg = override_msg
 		if override_msg:
-			label_poem.config(text=override_msg)
+			fade_in_poem(override_msg, font'("Lucida Calligraphy", 40, "italic"))
 		else:
 			rotate_poem() # resume poem rotation if override is gone
 
