@@ -240,7 +240,7 @@ def check_override_loop():
 	if override_msg != current_override_msg:
 		current_override_msg = override_msg
 		if override_msg:
-			fade_in_poem(override_msg, font'("Lucida Calligraphy", 40, "italic"))
+			fade_in_poem(override_msg, font("Lucida Calligraphy", 40, "italic"))
 		else:
 			rotate_poem() # resume poem rotation if override is gone
 
