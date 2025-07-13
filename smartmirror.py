@@ -6,6 +6,7 @@ import json
 import random
 from calendar_display import get_combined_events
 from reminders import reminders
+from app import get_override_message
 
 API_KEY = "f294f939822e1fc16e1d4cf9bc185be1"
 CITY = "Rochester"
@@ -138,6 +139,11 @@ poem_pool = []
 shown_poems = []
 
 def rotate_poem():
+	override_msg = get_override_message()
+	if override_msg:
+		label_poem.config(text=override_msg)
+		return
+
 	global poem_pool, shown_poems
 
 	try:
