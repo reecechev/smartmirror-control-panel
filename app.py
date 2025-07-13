@@ -11,7 +11,7 @@ def home():
 
 REMINDERS_FILE = "reminders.json"
 POEMS_FILE = "poems.json"
-OVERRIDE_FILE = "poem_override.son"
+OVERRIDE_FILE = "poem_override.json"
 
 def load_reminders():
 	try:
