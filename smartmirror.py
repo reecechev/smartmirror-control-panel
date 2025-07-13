@@ -222,14 +222,24 @@ def fade_in_poem(new_poem, step=0):
 
 	fade = hex(int(255 * (step / 10)))[2:].zfill(2)
 	color = f"#{fade}{fade}{fade}"
-	label_poem.config(
-		fg=color,
-		font=("Lucida Calligraphy", 40, "italic"),
-		justify="center",
-		anchor="center"
-	)
-	root.after(30, lambda: fade_in_poem(new_poem, step + 1, font))
 
+	# If this is an override message, change font/format
+	if new_poem == current_override_msg:
+		label_poem.config(
+			fg=color,
+			font=("Lucida Calligraphy", 40, "italic"),
+			justify="center",
+			anchor="center"
+		)
+	else:
+		label_poem.config(
+			fg=color,
+			font=font_poem, # this is your original font variable, make sure it's defined
+			justify="right", # or whatever your original values were
+			anchor="ne"
+		)
+
+	root.after(30, lambda: fade_in_poem(new_poem, step + 1))
 
 
 current_override_msg = "" # global or at top of script
@@ -241,7 +251,7 @@ def check_override_loop():
 	if override_msg != current_override_msg:
 		current_override_msg = override_msg
 		if override_msg:
-			fade_in_poem(override_msg, font("Lucida Calligraphy", 40, "italic"))
+			fade_in_poem(override_msg)
 		else:
 			rotate_poem() # resume poem rotation if override is gone
 
