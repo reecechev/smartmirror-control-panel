@@ -30,6 +30,12 @@ def poems():
 	override = get_override_message()
 	return render_template("poems.html", poems=poems, override=override)
 
+@app.route('/override')
+def get_override():
+	with open('poem_override.json', 'r') as f:
+		data = json.load(f)
+	return jsonify(data)
+
 @app.route("/add_poem", methods=["GET", "POST"])
 def add_poem():
 	poems = load_poems()
