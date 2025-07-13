@@ -101,16 +101,24 @@ label_reminders = tk.Label(root, textvariable=reminders_text, fg=COLOR, bg=BG, f
 label_reminders_title.place(relx=1.0, y=40, x=-PADDING, anchor="ne")
 label_reminders.place(relx=1.0, y=100, x=-PADDING, anchor="ne")
 
+def get_reminders():
+	try:
+		response = requests.get("https://smartmirror-app.onrender.com/reminders")
+		response.raise_for_status()
+		return response.json()
+	except Exception as e:
+		print("Error fetching reminders:", e)
+		return ["Error loading reminders."]
+
 def update_reminders():
 	try:
-		with open("/home/pi/smartmirror/webapp/reminders.json", "r") as f:
-			data = json.load(f)
-			if not data:
-				reminders_text.set("No reminders yet.")
-			else:
-				reminders_display = "\n".join(f"• {r}" for r in data[:5])
-				reminders_text.set(reminders_display)
-	except:
+		data = get_reminders()
+		if not data:
+			reminders_text.set("No reminders yet.")
+		else:
+			reminders_display = "\n".join(f"* {r}" for r in data[:5])
+			reminders_text.set(reminders_display)
+	except Exception:
 		reminders_text.set("Error loading reminders.")
 	root.after(60000, update_reminders)
 
