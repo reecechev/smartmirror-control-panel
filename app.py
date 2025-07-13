@@ -36,6 +36,15 @@ def get_override():
 		data = json.load(f)
 	return jsonify(data)
 
+@app.route('/clear_override', methods=["POST"])
+def clear_override():
+	try:
+		with open(OVERRIDE_FILE, "w") as f:
+			json.dump({"override": ""}, f)
+		return jsonify({"status": "success", "message": "Override cleared."})
+	except Exception as e:
+		return jsonify({"status": "error", "message": str(e)})
+
 @app.route("/add_poem", methods=["GET", "POST"])
 def add_poem():
 	poems = load_poems()

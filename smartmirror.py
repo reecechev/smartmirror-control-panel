@@ -141,10 +141,16 @@ shown_poems = []
 
 def get_override_message():
 	try:
-		with open(OVERRIDE_FILE, "r") as f:
-			return json.load(f).get("override", "")
-	except:
-		return ""
+		response = requests.get("https://smartmirror-app.onrender.com/override", verify=False)
+		if response.status_code == 200:
+			data = response.json()
+			return data.get("override", "")
+		else:
+			print("Failed to fetch override message. status: ", response.status_code)
+			return ""
+	except Exception as e:
+		print(f"Error fetching override message: {e}")
+	return ""
 
 def rotate_poem():
 	override_msg = get_override_message()
@@ -221,6 +227,23 @@ def fade_in_poem(step=0):
 	label_poem.config(fg=color)
 	root.after(30, lambda: fade_in_poem(step + 1))
 
+
+
+current_override_msg = "" # global or at top of script
+
+def check_override_loop():
+	global current_override_msg
+
+	override_msg = get_override_message()
+	if override_msg != current_override_msg:
+		current_override_msg = override_msg
+		if override_msg:
+			label_poem.config(text=override_msg)
+		else:
+			rotate_poem() # resume poem rotation if override is gone
+
+	root.after(10000, check_override_loop) # run every 10s
+
 # === CALENDAR (BOTTOM LEFT) ===
 calendar_text = tk.StringVar()
 label_calendar_title = tk.Label(root, text="Calendar", fg=COLOR, bg=BG, font=font_medium, anchor="sw")
@@ -246,6 +269,7 @@ def update_calendar():
 update_time()
 update_weather()
 rotate_poem()
+check_override_loop()
 update_reminders()
 update_calendar()
 
