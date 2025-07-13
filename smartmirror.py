@@ -10,6 +10,7 @@ from app import get_override_message
 
 API_KEY = "f294f939822e1fc16e1d4cf9bc185be1"
 CITY = "Rochester"
+OVERRIDE_FILE = "/home/pi/smartmirror/poem_override.json"
 
 def get_weather():
 	url = f"http://api.openweathermap.org/data/2.5/forecast?q={CITY}&units=imperial&appid={API_KEY}"
@@ -138,8 +139,16 @@ label_poem.place(relx=1.0, rely=1.0, x=-PADDING, y=-PADDING, anchor="se")
 poem_pool = []
 shown_poems = []
 
+def get_override_message():
+	try:
+		with open(OVERRIDE_FILE, "r") as f:
+			return json.load(f).get("override", "")
+	except:
+		return ""
+
 def rotate_poem():
 	override_msg = get_override_message()
+	print(f"Override message: '{override_msg}'")
 	if override_msg:
 		label_poem.config(text=override_msg)
 		return
