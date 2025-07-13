@@ -27,10 +27,29 @@
 	<hr>
 
 	<!-- Clear Override -->
-	<form method="POST" action="/clear_override">
-		<button type="submit">Clear Override</button>
+	<form id="clear-form" method="POST" action="/clear_override" onsubmit="return clearOverride();">
+		<button type="submit">🧹Clear override</button>
 	</form>
+	<p id="confirmation-msg" style="color: green; display: none;">✅ Override cleared.</p>
 
+	<script>
+	function clearOverride() {
+		fetch("/clear_override", {
+			method: "POST"
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.status === "success") {
+				const msg = document.getElementById("confirmation-msg");
+				msg.style.display = "block";
+				setTimeout(() => {
+					msg.style.display = "none";
+				}, 3000); // Hide after 3 seconds
+			}
+		});
+		return false; // Prevent full page reload
+	}
+	</script>
 	<!-- List poems -->
 	<h2>📝 Current Poems</h2>
 	<ul>
