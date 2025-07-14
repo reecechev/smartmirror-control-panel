@@ -28,6 +28,13 @@ def save_reminders(reminders):
 def poems():
 	poems = load_poems()
 	override = get_override_message()
+
+	try:
+		with open("current_poem.json", "r", encoding="utf-8" as f:
+			current_poem = json.load(f)
+	except FileNotFoundError:
+		current_poem = None
+
 	return render_template("poems.html", poems=poems, override=override)
 
 @app.route('/override')
@@ -84,9 +91,11 @@ def current_poem():
 	try:
 		with open("poems.json", "r", encoding="utf-8") as f:
 			poem_data = json.load(f)
-			if poem_data["display"]:
-				current = poem_data["display"][0] # Or track the actual current one
-				return f'"{current["text"]}"\n— {current["author"]}'
+			if not poem_data.get("display"):
+				return "No poem available"
+
+			index = poem_data["poems"][index]
+			return f"{current['text']}\n— {current.get('author', 'Unknown')}"
 	except Exception as e:
 		return f"Error loading poem: {e}"
 	return "No poem available"

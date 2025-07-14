@@ -201,6 +201,15 @@ def rotate_poem():
 		next_poem = poem_pool.pop(0)
 		shown_poems.append(next_poem)
 		fade_out_poem(next_poem)
+
+		try:
+			text, authour = next_poem.spli(\n", 1)
+		except ValueError:
+			text, author = next_poem, "Unknown"
+
+		with open("current_poem.json", "w" encoding="utf-8") as f:
+			json.dump({"text": text.strip(), "author": author.strip()}, f)
+
 	else:
 		label_poem.config(text="No poems found or all too long")
 	root.after(300000, rotate_poem)
