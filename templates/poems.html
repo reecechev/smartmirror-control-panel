@@ -1,65 +1,92 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Poem Control Panel</title>
+	<title>Poem Manager</title>
+	<style>
+		body {
+			background-color: #111;
+			color: #fff;
+			font-family: sans-serif;
+			padding: 20px;
+		}
+
+		h2 {
+			margin-top: 40px;
+			font-size: 1.4em;
+			border-bottom: 1px solid #333;
+			padding-bottom: 5px;
+		}
+		
+		.section {
+			background-color: #1e1e1e;
+			padding: 15px;
+			border-radius: 10px;
+			margin-bottom: 25px;
+			box-shadow: 0 0 8px rgba(255,255,255,0.05);
+		}
+	
+		input, textarea {
+			width: 100%;
+			padding: 10px;
+			margin-top: 5px;
+			margin-bottom: 10px;
+			border: none;
+			border-radius: 5px;
+			background-color: #2c2c2c;
+			color: #fff;
+		}
+		
+		button {
+			background-color: #007bff;
+			color: white;
+			padding: 8px 16px;
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 0.9em;
+		}
+
+		.small-button {
+			background-color: #444;
+			font-size: 0.8em;
+			margin-top: 5px;
+		}
+	</style>
 </head>
 <body>
-	<h1>📜 Poem Manager</h1>
 
-	<!-- Add a new poem -->
-	<form action="/poem_override" method="POST">>
-		<textarea name="poem_text" rows="4" cols="60" placeholder="Write a new poem..." required></textarea><br>
-		<input name="poem_author" placeholder="Author (optional)"><br>
-		<button type="submit">➕ Add Poem</button>
-	</form>
+	<h1 style="text-align: center;">🪞 Poem Manager</h1>
 
-	<hr>
+	<div class="section">
+		<h2>✍️ Add a New Poem</h2>
+		<form action="/add_poem" method="POST">
+			<textarea name="poem_text" rows="4" placeholder="Write a new poem..."></textarea>
+			<input type="text" name="author" placeholder="Author (optional)">
+			<button type="submit">➕ Add Poem</button>
+		</form>
+	</div>
 
-	<!-- Send a temporary override -->
-	<h2>💌 Send a Message</h2>
-	<form method="POST" action="{{ url_for('poem_override') }}">
-		<input name="override_msg" placeholder="This message will replace poems temporarily" size="60">
-		<button type="submit">📤 Send Message</button>
-	</form>
+	<div class="section">
+		<h2>💌 Send a Temporary Message</h2>
+		<form action="/set_override" method="POST">
+			<input type="text" name="override_text" placeholder="This message will replace poems temporarily">
+			<button type="submit">📤 Send Message</button>
+		</form>
+		<p><strong>Current Override:</strong> {{ override_text or "None" }}</p>
+		<form action="/clear_override" method="POST">
+			<button class="small-button" type="submit">❌ Clear override</button>
+		</form>
+	</div>
 
-	<p><strong>Current Override:</strong> {{ override }}</p>
-
-	<hr>
-
-	<!-- Clear Override -->
-	<form id="clear-form" method="POST" action="/clear_override" onsubmit="return clearOverride();">
-		<button type="submit">🧹Clear override</button>
-	</form>
-	<p id="confirmation-msg" style="color: green; display: none;">✅ Override cleared.</p>
-
-	<script>
-	function clearOverride() {
-		fetch("/clear_override", {
-			method: "POST"
-		})
-		.then(response => response.json())
-		.then(data => {
-			if (data.status === "success") {
-				const msg = document.getElementById("confirmation-msg");
-				msg.style.display = "block";
-				setTimeout(() => {
-					msg.style.display = "none";
-				}, 3000); // Hide after 3 seconds
-			}
-		});
-		return false; // Prevent full page reload
-	}
-	</script>
-	<!-- List poems -->
-	<h2>📝 Current Poems</h2>
-	<ul>
+	<div class="section">
+		<h2>📜 Current Poems</h2>
 		{% for poem in poems %}
-			<li>
-				"{{ poem.text }}"
-				{% if poem.author %}— <i>{{ poem.author }}</i>{% endif %}
-				{% if poem.favorite %} ⭐{% endif %}
-			</li>
-		{% endfor %}
-	</ul>
+			<pre style="white-space: pre-wrap;">{{ poem }}</pre>
+			<hr style="border-color: #333;">
+		{% else %}
+			<p>No poems found yet.</p>
+			{% endfor %}
+	</div>
+
 </body>
 </html>

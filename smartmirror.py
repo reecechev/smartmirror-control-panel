@@ -146,7 +146,7 @@ def get_override_message():
 		response = requests.get("https://smartmirror-app.onrender.com/override")
 		if response.status_code == 200:
 			data = response.json()
-			return
+			return data["override"]
 		else:
 			print("Failed to fetch override message. status: ", response.status_code)
 			return ""
@@ -200,6 +200,13 @@ def rotate_poem():
 	if poem_pool:
 		next_poem = poem_pool.pop(0)
 		shown_poems.append(next_poem)
+		label_poem.config(
+			text=next_poem,
+			fg=COLOR,
+			font=("URW Gothic L", 34),
+			justify="right",
+			anchor="ne"
+		)
 		fade_out_poem(next_poem)
 	else:
 		label_poem.config(text="No poems found or all too long")
@@ -227,7 +234,7 @@ def fade_in_poem(new_poem, step=0):
 		label_poem.config(
 			text=new_poem,
 			fg=color,
-			font=("Lucida Calligraphy", 40, "italic"),
+			font=("URW Chancery L", 40, "italic"),
 			justify="center",
 			anchor="center"
 		)
@@ -246,14 +253,25 @@ def check_override_loop():
 	global current_override_msg, override_active
 	override_msg = get_override_message()
 
-	if override_msg and override_msg != current_override_msg:
+	print("override froms erver: ", override_msg)
+	print("current message on screen: ", current_override_msg)
+
+	if override_msg is not None and override_msg.strip() != "" and override_msg != current_override_msg:
 		current_override_msg = override_msg
 		override_active = True
-		fade_out_poem(current_override_msg)
+		label_poem.config(
+			text=current_override_msg,
+			fg=COLOR,
+			font=("URW Chancery L", 40, "italic"),
+			justify="center",
+			anchor="center"
+		)
+		fade_in_poem(current_override_msg)
 	elif not override_msg and override_active:
+		fade_out_poem(current_override_msg)
 		override_active = False
 		current_override_msg = ""
-		rotate_poem()
+		fade_in_poem(rotate_poem())
 
 	root.after(10000, check_override_loop) # Check every 10 seconds
 
