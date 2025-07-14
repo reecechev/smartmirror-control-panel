@@ -11,6 +11,8 @@ from app import get_override_message
 API_KEY = "f294f939822e1fc16e1d4cf9bc185be1"
 CITY = "Rochester"
 OVERRIDE_FILE = "/home/pi/smartmirror/poem_override.json"
+current_override_msg = ""
+override_active = False
 
 def get_weather():
 	url = f"http://api.openweathermap.org/data/2.5/forecast?q={CITY}&units=imperial&appid={API_KEY}"
@@ -155,6 +157,9 @@ def get_override_message():
 def rotate_poem():
 	global poem_pool, shown_poems
 
+	if override_active:
+		return
+
 	try:
 		with open("poems.txt", "r") as file:
 			content = file.read()
@@ -218,9 +223,9 @@ def fade_in_poem(new_poem, step=0):
 	fade = hex(int(255 * (step / 10)))[2:].zfill(2)
 	color = f"#{fade}{fade}{fade}"
 
-	# If this is an override message, change font/format
-	if new_poem == current_override_msg:
+	if override_active:
 		label_poem.config(
+			text=new_poem,
 			fg=color,
 			font=("Lucida Calligraphy", 40, "italic"),
 			justify="center",
@@ -228,29 +233,29 @@ def fade_in_poem(new_poem, step=0):
 		)
 	else:
 		label_poem.config(
+			text=new_poem,
 			fg=color,
-			font=font_poem, # this is your original font variable, make sure it's defined
-			justify="right", # or whatever your original values were
+			font=font_poem, # ← your normal poem font
+			justify="right",
 			anchor="ne"
 		)
 
 	root.after(30, lambda: fade_in_poem(new_poem, step + 1))
 
-
-current_override_msg = "" # global or at top of script
-
 def check_override_loop():
-	global current_override_msg
-
+	global current_override_msg, override_active
 	override_msg = get_override_message()
-	if override_msg != current_override_msg:
-		current_override_msg = override_msg
-		if override_msg:
-			fade_in_poem(override_msg)
-		else:
-			rotate_poem() # resume poem rotation if override is gone
 
-	root.after(10000, check_override_loop) # run every 10s
+	if override_msg and override_msg != current_override_msg:
+		current_override_msg = override_msg
+		override_active = True
+		fade_out_poem(current_override_msg)
+	elif not override_msg and override_active:
+		override_active = False
+		current_override_msg = ""
+		rotate_poem()
+
+	root.after(10000, check_override_loop) # Check every 10 seconds
 
 # === CALENDAR (BOTTOM LEFT) ===
 calendar_text = tk.StringVar()
