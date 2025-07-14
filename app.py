@@ -30,7 +30,7 @@ def poems():
 	override = get_override_message()
 
 	try:
-		with open("current_poem.json", "r", encoding="utf-8" as f:
+		with open("current_poem.json", "r", encoding="utf-8") as f:
 			current_poem = json.load(f)
 	except FileNotFoundError:
 		current_poem = None
