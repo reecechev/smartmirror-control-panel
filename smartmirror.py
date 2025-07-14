@@ -161,9 +161,9 @@ def rotate_poem():
 		return
 
 	try:
-		with open("poems.txt", "r") as file:
-			content = file.read()
-			all_poems = [poem.strip() for poem in content.split("---") if poem.strip()]
+		with open("poems.json", "r", encoding="utf-8") as f:
+			poem_data = json.load(f)
+			all_poems = [f'{p.get("text", "").strip()}\n- {p.get("author", "Unknown").strip()}' for p in poem_data.get("display", []) if p.get("text")]
 	except:
 		all_poems = []
 
@@ -200,17 +200,10 @@ def rotate_poem():
 	if poem_pool:
 		next_poem = poem_pool.pop(0)
 		shown_poems.append(next_poem)
-		label_poem.config(
-			text=next_poem,
-			fg=COLOR,
-			font=("URW Gothic L", 34),
-			justify="right",
-			anchor="ne"
-		)
 		fade_out_poem(next_poem)
 	else:
 		label_poem.config(text="No poems found or all too long")
-		root.after(300000, rotate_poem)
+	root.after(300000, rotate_poem)
 
 def fade_out_poem(new_poem, step=0):
 	if step > 10:
