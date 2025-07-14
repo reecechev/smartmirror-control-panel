@@ -72,7 +72,7 @@
 			<input type="text" name="override_msg" placeholder="This message will replace poems temporarily">
 			<button type="submit">📤 Send Message</button>
 		</form>
-		<p><strong>Current Override:</strong> {{ override_text or "None" }}</p>
+		<p><strong>Current Override:</strong> {{ override_msg or "None" }}</p>
 		<form action="/clear_override" method="POST">
 			<button class="small-button" type="submit">❌ Clear override</button>
 		</form>
