@@ -200,15 +200,6 @@ def rotate_poem():
 	if poem_pool:
 		next_poem = poem_pool.pop(0)
 		shown_poems.append(next_poem)
-
-		try:
-			text, author = next_poem.split("\n", 1)
-		except ValueError:
-			text, author = next_poem, "Unknown"
-
-		with open("current_poem.json", "w", encoding="utf-8") as f:
-			json.dump({"text": text.strip(), "author": author.strip()}, f)
-
 		fade_out_poem(next_poem)
 
 	else:
@@ -228,6 +219,14 @@ def fade_out_poem(new_poem, step=0):
 
 def fade_in_poem(new_poem, step=0):
 	if step > 10:
+		try:
+			text, author = new_poem.split("\n", 1)
+		except ValueError:
+			text, author = new_poem, "Unknown"
+
+		with open("current_poem.json", "w", encoding="utf-8") as f:
+			json.dump({"text": text.strip(), "author": author.strip()}, f)
+
 		return
 
 	fade = hex(int(255 * (step / 10)))[2:].zfill(2)
