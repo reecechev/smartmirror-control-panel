@@ -93,9 +93,9 @@ def current_poem():
 			poem_data = json.load(f)
 			text = poem_data.get("text", "").strip()
 			author = poem_data.get("author", "Unknown")
-			return f"{text}\n- {author}"
+			return jsonify({"text": text, "author": author})
 	except Exception as e:
-		return f"Error loading poem: {e}"
+		return jsonify({"error": f"Error loading poem: {e}"})
 
 @app.route("/missyou")
 def missyou():
