@@ -93,7 +93,7 @@
 
 		<script>
 			function updateCurrentPoem() {
-				fetch("/current_poem", { cache: "no-store" })
+				fetch("http://localhost:5000/current_poem", { cache: "no-store" })
 					.then(response => response.json())
 					.then(data => {
 						console.log("fetched data: ", data);
