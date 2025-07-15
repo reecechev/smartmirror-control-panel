@@ -200,7 +200,6 @@ def rotate_poem():
 	if poem_pool:
 		next_poem = poem_pool.pop(0)
 		shown_poems.append(next_poem)
-		fade_out_poem(next_poem)
 
 		try:
 			text, author = next_poem.split("\n", 1)
@@ -209,6 +208,8 @@ def rotate_poem():
 
 		with open("current_poem.json", "w", encoding="utf-8") as f:
 			json.dump({"text": text.strip(), "author": author.strip()}, f)
+
+		fade_out_poem(next_poem)
 
 	else:
 		label_poem.config(text="No poems found or all too long")
