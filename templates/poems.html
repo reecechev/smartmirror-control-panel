@@ -106,7 +106,7 @@
 							poemElement.textContent = `Error: ${data.error}`;
 						} else {
 							console.log("Updating poem element...", data);
-							poemElement.textContent = `${data.text}\n\n- ${data.author}`;
+							poemElement.textContent = `${data.text}<br>- ${data.author}`;
 						}
 					})
 					.catch(error => {
