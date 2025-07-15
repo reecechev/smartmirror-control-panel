@@ -89,16 +89,13 @@ def get_override_message():
 @app.route("/current_poem")
 def current_poem():
 	try:
-		with open("poems.json", "r", encoding="utf-8") as f:
-			poem_data = json.load(f)
-			if not poem_data.get("display"):
-				return "No poem available"
-
-			index = poem_data["poems"][index]
-			return f"{current['text']}\n— {current.get('author', 'Unknown')}"
+		with open("current_poem.json", "r", encoding="utf-8") as f:
+		poem_data = json.load(f)
+		text = poem_data.get("text", "").strip()
+		author = poem_data.get("author", "Unknown")
+		return f"{text}\n- {author}"
 	except Exception as e:
 		return f"Error loading poem: {e}"
-	return "No poem available"
 
 @app.route("/missyou")
 def missyou():
