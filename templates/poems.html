@@ -92,15 +92,21 @@
 		</div>
 
 		<script>
-			fetch('/current_poem')
-				.then(response => response.text())
-				.then(data => {
-					document.getElementById('current-poem').textContent = data;
-				})
-				.catch(error => {
-					document.getElementById('current-poem').textContent = "Could not load current poem.";
-					console.error(error);
-				});
+			function updatePoem() {
+				fetch("/current_poem")
+					.then(response => response.json())
+					.then(data => {
+						document.getElementById("current-poem").innerHTML =
+							`<em>${data.text}</em><br><strong>- ${data.author}</strong>`;
+					})
+					.catch(error => {
+						document.getElementById("current-poem").textContent = "Could not load current poem.";
+						console.error(error);
+					});
+			}
+
+			updatePoem(); // Load immediately
+			setInterval(updatePoem, 1000); // Update every 10 seconds
 		</script>
 	</div>
 
