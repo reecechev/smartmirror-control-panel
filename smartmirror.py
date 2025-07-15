@@ -223,6 +223,8 @@ def fade_in_poem(new_poem, step=0):
 	except ValueError:
 		text, author = new_poem, "Unknown"
 	if step > 10:
+		return
+	if step == 0:
 		with open("current_poem.json", "w", encoding="utf-8") as f:
 			json.dump({"text": text.strip(), "author": author.strip()}, f)
 
@@ -242,7 +244,6 @@ def fade_in_poem(new_poem, step=0):
 				justify="right",
 				anchor="ne"
 			)
-		return
 
 	fade = hex(int(255 * (step / 10)))[2:].zfill(2)
 	color = f"#{fade}{fade}{fade}"
