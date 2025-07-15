@@ -82,6 +82,15 @@
 		<h2>📜 Current Poem</h2>
 		<pre id="current-poem" style="white-space: pre-wrap; border-color: #333;">Loading...</pre>
 
+		<div style="margin-top: 10px;">
+			<form action="/favorite_poem" method="POST" style="display:inline;">
+				<button type="submit" class="small-button" title="Favorite">❤</button>
+			</form>
+			<form action="/remove_poem" method="POST" style="display:inline;">
+				<button type="submit" class="small-button" title="Remove">✖</button>
+			</form>
+		</div>
+
 		<script>
 			fetch('/current_poem')
 				.then(response => response.text())

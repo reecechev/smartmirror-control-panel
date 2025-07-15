@@ -106,6 +106,55 @@ def poem_override():
 	msg = request.form.get("override_msg", "")
 	set_override_message(msg)
 	return redirect("/poems")
+
+@app.route("/favorite_poem", methods=["POST"])
+def favorite_poem():
+	try:
+		with open("current_poem.json", "r", encoding="utf-8") as f:
+			current_poem = json.load(f)
+
+		with open("poems.json", "r", encoding="utf-8") as f:
+			poem_data = json.load(f)
+
+		# Move to favorites if not already there
+		if current_poem not in poem_data.get("favorites", []):
+			poem_data["favorites"].append(current_poem)
+
+		# Remove from display pool
+		if current_poem in poem_data.get("display", []):
+			poem_data["display"].remove(current_poem)
+
+		with open("poems.json", "w", encoding="utf-8") as f:
+			json.dump(poem_data, f, indent=4)
+
+		return redirect("/poems")
+	except Exception as e:
+		return f"Error favoriting poem: {e}", 500
+
+@app.route("/remove_poem", methods=["POST"])
+def remove_poem():
+	try:
+		with open("current_poem.json", "r", encoding="utf-8") as f:
+			current_poem = json.load(f)
+
+		with open("poems.json", "r", encoding="utf-8") as f:
+			poem_data = json.load(f)
+
+		# Move to removed if not already there
+		if current_poem not in poem_data.get("removed", []):
+			poem_data["removed"].append(current_poem)
+
+		# Remove from display pool
+		if current_poem in poem_data.get("display", []):
+			poem_data["display"].remove(current_poem)
+
+		with open("poems.json", "w", encoding="utf-8") as f:
+			json.dump(poem_data, f, indent=4)
+
+		return redirect("/poems")
+	except Exception as e:
+		return f"Error removing poem: {e}", 500
+
 @app.route("/calendar")
 def calendar():
 	return render_template("calendar.html")
