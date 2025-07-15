@@ -222,32 +222,33 @@ def fade_in_poem(new_poem, step=0):
 		text, author = new_poem.split("\n", 1)
 	except ValueError:
 		text, author = new_poem, "Unknown"
+
+	fade = hex(int(255 * (step / 10)))[2:].zfill(2)
+	color = f"#{fade}{fade}{fade}"
+
 	if step > 10:
 		return
 	if step == 0:
 		with open("current_poem.json", "w", encoding="utf-8") as f:
 			json.dump({"text": text.strip(), "author": author.strip()}, f)
 
-		if override_active:
-			label_poem.config(
-				text=new_poem,
-				fg=color,
-				font=("URW Chancery L", 40, "italic"),
-				justify="center",
-				anchor="center"
-			)
-		else:
-			label_poem.config(
-				text=new_poem,
-				fg=color,
-				font=font_poem, # ← your normal poem font
-				justify="right",
-				anchor="ne"
-			)
+	if override_active:
+		label_poem.config(
+			text=new_poem,
+			fg=color,
+			font=("URW Chancery L", 40, "italic"),
+			justify="center",
+			anchor="center"
+		)
+	else:
+		label_poem.config(
+			text=new_poem,
+			fg=color,
+			font=font_poem, # ← your normal poem font
+			justify="right",
+			anchor="ne"
+		)
 
-	fade = hex(int(255 * (step / 10)))[2:].zfill(2)
-	color = f"#{fade}{fade}{fade}"
-	label_poem.config(fg=color)
 	root.after(30, lambda: fade_in_poem(new_poem, step + 1))
 
 def check_override_loop():
