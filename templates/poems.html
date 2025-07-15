@@ -80,7 +80,7 @@
 
 	<div class="section">
 		<h2>📜 Current Poem</h2>
-		<pre id="current-poem" style="white-space: pre-wrap; border-color: #333;">Loading...</pre>
+		<div id="current-poem" style="white-space: pre-wrap; border-color: #333;">Loading...</div>
 
 		<div style="margin-top: 10px;">
 			<form action="/favorite_poem" method="POST" style="display:inline;">
@@ -92,26 +92,25 @@
 		</div>
 
 		<script>
+			const NGROK_URL = "https://24563664835a.ngrok-free.app";
 			function updateCurrentPoem() {
-				fetch("http://192.168.1.177:5000/current_poem", { cache: "no-store" })
+				fetch(`${NGROK_URL}/current_poem`, { cache: "no-store" })
 					.then(response => response.json())
 					.then(data => {
-						console.log("fetched data: ", data);
 						const poemElement = document.getElementById("current-poem");
 						if (!poemElement) {
-							console.error("element with id 'current-poem' not found in DOM.");
 							return;
 						}
 
 						if (data.error) {
-							poemElement.textContent = data.error;
+							poemElement.textContent = `Error: ${data.error}`;
 						} else {
-							console.log("Updating poem element...");
+							console.log("Updating poem element...", data);
 							poemElement.textContent = `${data.text}\n\n- ${data.author}`;
 						}
 					})
 					.catch(error => {
-						console.error("Fetch errpr:", error);
+						console.error("Fetch error:", error);
 						document.getElementById("current-poem").textContent = "Could not load current poem.";
 					});
 			}
