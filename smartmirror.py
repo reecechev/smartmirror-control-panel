@@ -204,7 +204,7 @@ def rotate_poem():
 
 	else:
 		label_poem.config(text="No poems found or all too long")
-	root.after(300000, rotate_poem)
+	root.after(30000, rotate_poem)
 
 def fade_out_poem(new_poem, step=0):
 	if step > 10:
@@ -218,37 +218,35 @@ def fade_out_poem(new_poem, step=0):
 	root.after(30, lambda: fade_out_poem(new_poem, step + 1))
 
 def fade_in_poem(new_poem, step=0):
+	try:
+		text, author = new_poem.split("\n", 1)
+	except ValueError:
+		text, author = new_poem, "Unknown"
 	if step > 10:
-		try:
-			text, author = new_poem.split("\n", 1)
-		except ValueError:
-			text, author = new_poem, "Unknown"
-
 		with open("current_poem.json", "w", encoding="utf-8") as f:
 			json.dump({"text": text.strip(), "author": author.strip()}, f)
 
+		if override_active:
+			label_poem.config(
+				text=new_poem,
+				fg=color,
+				font=("URW Chancery L", 40, "italic"),
+				justify="center",
+				anchor="center"
+			)
+		else:
+			label_poem.config(
+				text=new_poem,
+				fg=color,
+				font=font_poem, # ← your normal poem font
+				justify="right",
+				anchor="ne"
+			)
 		return
 
 	fade = hex(int(255 * (step / 10)))[2:].zfill(2)
 	color = f"#{fade}{fade}{fade}"
-
-	if override_active:
-		label_poem.config(
-			text=new_poem,
-			fg=color,
-			font=("URW Chancery L", 40, "italic"),
-			justify="center",
-			anchor="center"
-		)
-	else:
-		label_poem.config(
-			text=new_poem,
-			fg=color,
-			font=font_poem, # ← your normal poem font
-			justify="right",
-			anchor="ne"
-		)
-
+	label_poem.config(fg=color)
 	root.after(30, lambda: fade_in_poem(new_poem, step + 1))
 
 def check_override_loop():
