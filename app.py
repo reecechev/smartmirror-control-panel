@@ -90,10 +90,10 @@ def get_override_message():
 def current_poem():
 	try:
 		with open("current_poem.json", "r", encoding="utf-8") as f:
-		poem_data = json.load(f)
-		text = poem_data.get("text", "").strip()
-		author = poem_data.get("author", "Unknown")
-		return f"{text}\n- {author}"
+			poem_data = json.load(f)
+			text = poem_data.get("text", "").strip()
+			author = poem_data.get("author", "Unknown")
+			return f"{text}\n- {author}"
 	except Exception as e:
 		return f"Error loading poem: {e}"
 
