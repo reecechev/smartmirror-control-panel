@@ -93,24 +93,20 @@
 
 		<script>
 			function updateCurrentPoem() {
-				fetch('https://64b7eecd3f2e.ngrok-free.app/current_poem')
-					.then(response => response.json())
+				fetch("https://95c65a7433cf.ngrok-free.app/current_poem")
+					.then(response => {
+						if (!response.ok) {
+							throw new Error(`HTTP error! status: ${response.status}`);
+						}
+						return response.json();
+					})
 					.then(data => {
-						const poemElement = document.getElementById("current-poem");
-						if (!poemElement) {
-							return;
-						}
-
-						if (data.error) {
-							poemElement.textContent = `Error: ${data.error}`;
-						} else {
-							console.log("Updating poem element...", data);
-							poemElement.textContent = `${data.text}<br>- ${data.author}`;
-						}
+						console.log("Poem loaded:", data);
+						document.getElementById("poemText").textContent = data.text;
+						document.getElementById("poemAuthor").textContent = `– ${data.author}`;
 					})
 					.catch(error => {
 						console.error("Fetch error:", error);
-						document.getElementById("current-poem").textContent = "Could not load current poem.";
 					});
 			}
 
