@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify, render_template
 from flask import Flask, render_template, request, redirect
 import json
+from flask_cors import CORS
 
 app = Flask(__name__)
 from flask import render_template
+CORS(app)
 
 @app.route("/")
 def home():
