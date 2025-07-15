@@ -92,9 +92,8 @@
 		</div>
 
 		<script>
-			const NGROK_URL = "https://801ef3b5271e.ngrok-free.app";
 			function updateCurrentPoem() {
-				fetch(`${NGROK_URL}/current_poem`, { cache: "no-store" })
+				fetch('https://45d403dc00cc.ngrok-free.app/current_poem')
 					.then(response => response.json())
 					.then(data => {
 						const poemElement = document.getElementById("current-poem");
