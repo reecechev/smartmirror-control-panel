@@ -97,14 +97,21 @@
 					.then(response => response.json())
 					.then(data => {
 						console.log("fetched data: ", data);
+						const poemElement = document.getElementById("current-poem");
+						if (!poemElement) {
+							console.error("element with id 'current-poem' not found in DOM.");
+							return;
+						}
+
 						if (data.error) {
-							document.getElementById("current-poem").textContent = data.error;
+							poemElement.textContent = data.error;
 						} else {
-							document.getElementById("current-poem").textContent = `${data.text}\n\n— ${data.author}`;
+							console.log("Updating poem element...");
+							poemElement.textContent = '${data.text}\n\n- ${data.author}';
 						}
 					})
 					.catch(error => {
-						console.log("Fetch errpr:", error);
+						console.error("Fetch errpr:", error);
 						document.getElementById("current-poem").textContent = "Could not load current poem.";
 					});
 			}
