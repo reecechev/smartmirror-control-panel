@@ -4,7 +4,6 @@ import json
 from flask_cors import CORS
 
 app = Flask(__name__)
-from flask import render_template
 CORS(app)
 
 @app.route("/")
