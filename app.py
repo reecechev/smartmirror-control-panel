@@ -129,7 +129,7 @@ def favorite_poem():
 		with open("poems.json", "w", encoding="utf-8") as f:
 			json.dump(poem_data, f, indent=4)
 
-		return redirect("/poems")
+		return redirect("https://smartmirror-app.onrender.com/poems")
 	except Exception as e:
 		return f"Error favoriting poem: {e}", 500
 
@@ -153,7 +153,7 @@ def remove_poem():
 		with open("poems.json", "w", encoding="utf-8") as f:
 			json.dump(poem_data, f, indent=4)
 
-		return redirect("/poems")
+		return redirect("https://smartmirror-app.onrender.com/poems")
 	except Exception as e:
 		return f"Error removing poem: {e}", 500
 
