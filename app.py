@@ -90,7 +90,7 @@ def get_override_message():
 @app.route("/current_poem")
 def current_poem():
     try:
-        with open("current_poem.json", "r", encoding="utf-8") as f:
+        with open("smartmirror/current_poem.json", "r", encoding="utf-8") as f:
             poem_data = json.load(f)
             text = poem_data.get("text", "").strip()
             author = poem_data.get("author", "Unknown")
