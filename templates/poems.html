@@ -96,28 +96,33 @@
 
 		<script>
 			function updateCurrentPoem() {
-			    fetch("https://74d1718c0c99.ngrok-free.app/current_poem")
+				fetch("https://74d1718c0c99.ngrok-free.app/current_poem", {
+					method: 'GET',
+					headers: {
+						'ngrok-skip-browser-warning': 'true'
+					}
+				})
 			        .then(response => {
-			            if (!response.ok) {
-			                throw new Error(`HTTP error! status: ${response.status}`);
-			            }
-			            return response.json();
+			        	if (!response.ok) {
+			                	throw new Error(`HTTP error! status: ${response.status}`);
+			            	}
+			        	return response.json();
 			        })
 			        .then(data => {
-			            console.log("Poem loaded:", data);
+			        	console.log("Poem loaded:", data);
 			            
-			            // Update poem text
-			            document.getElementById("poemText").textContent = data.text;
+			        	// Update poem text
+			        	document.getElementById("poemText").textContent = data.text;
 			            
-			            // Update author (don't add extra dash since it's already in the data)
-			            document.getElementById("poemAuthor").textContent = data.author;
+			        	// Update author (don't add extra dash since it's already in the data)
+			        	document.getElementById("poemAuthor").textContent = data.author;
 			        })
 			        .catch(error => {
-			            console.error("Fetch error:", error);
+			        	console.error("Fetch error:", error);
 			            
-			            // Show error in the UI
-			            document.getElementById("poemText").textContent = "Error loading poem";
-			            document.getElementById("poemAuthor").textContent = "";
+			        	// Show error in the UI
+			        	document.getElementById("poemText").textContent = "Error loading poem";
+			        	document.getElementById("poemAuthor").textContent = "";
 			        });
 }
 
