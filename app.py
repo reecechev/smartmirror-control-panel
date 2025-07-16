@@ -96,30 +96,12 @@ def current_poem():
             author = poem_data.get("author", "Unknown")
             response = jsonify({"text": text, "author": author})
             
-            # Add explicit CORS headers
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-            
             return response
     except Exception as e:
         error_response = jsonify({"error": f"Error loading poem: {e}"})
         print("Current directory:", os.getcwd())
-        # Add CORS headers to error response too
-        error_response.headers['Access-Control-Allow-Origin'] = '*'
-        error_response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        error_response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
         
         return error_response
-
-# Add OPTIONS handler for preflight requests
-@app.route("/current_poem", methods=["OPTIONS"])
-def current_poem_options():
-    response = make_response()
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-    return response
 
 @app.route("/missyou")
 def missyou():
