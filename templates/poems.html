@@ -96,25 +96,36 @@
 
 		<script>
 			function updateCurrentPoem() {
-				fetch("https://95c65a7433cf.ngrok-free.app/current_poem")
-					.then(response => {
-						if (!response.ok) {
-							throw new Error(`HTTP error! status: ${response.status}`);
-						}
-						return response.json();
-					})
-					.then(data => {
-						console.log("Poem loaded:", data);
-						document.getElementById("poemText").textContent = data.text;
-						document.getElementById("poemAuthor").textContent = `– ${data.author}`;
-					})
-					.catch(error => {
-						console.error("Fetch error:", error);
-					});
-			}
+			    fetch("https://95c65a743acf.ngrok-free.app/current_poem")
+			        .then(response => {
+			            if (!response.ok) {
+			                throw new Error(`HTTP error! status: ${response.status}`);
+			            }
+			            return response.json();
+			        })
+			        .then(data => {
+			            console.log("Poem loaded:", data);
+			            
+			            // Update poem text
+			            document.getElementById("poemText").textContent = data.text;
+			            
+			            // Update author (don't add extra dash since it's already in the data)
+			            document.getElementById("poemAuthor").textContent = data.author;
+			        })
+			        .catch(error => {
+			            console.error("Fetch error:", error);
+			            
+			            // Show error in the UI
+			            document.getElementById("poemText").textContent = "Error loading poem";
+			            document.getElementById("poemAuthor").textContent = "";
+			        });
+}
 
-			setInterval(updateCurrentPoem, 5000); // Refresh every 5 seconds
-			updateCurrentPoem(); // Initial load
+// Initial load
+updateCurrentPoem();
+
+// Refresh every 5 seconds
+setInterval(updateCurrentPoem, 5000);
 		</script>
 
 	</div>
