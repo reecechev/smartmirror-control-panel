@@ -126,10 +126,6 @@ def favorite_poem():
 		if current_poem not in poem_data.get("favorites", []):
 			poem_data["favorites"].append(current_poem)
 
-		# Remove from display pool
-		if current_poem in poem_data.get("display", []):
-			poem_data["display"].remove(current_poem)
-
 		with open("poems.json", "w", encoding="utf-8") as f:
 			json.dump(poem_data, f, indent=4)
 
