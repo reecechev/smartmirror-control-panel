@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, make_response
 import json
 from flask_cors import CORS
 
@@ -89,14 +89,37 @@ def get_override_message():
 
 @app.route("/current_poem")
 def current_poem():
-	try:
-		with open("current_poem.json", "r", encoding="utf-8") as f:
-			poem_data = json.load(f)
-			text = poem_data.get("text", "").strip()
-			author = poem_data.get("author", "Unknown")
-			return jsonify({"text": text, "author": author})
-	except Exception as e:
-		return jsonify({"error": f"Error loading poem: {e}"})
+    try:
+        with open("current_poem.json", "r", encoding="utf-8") as f:
+            poem_data = json.load(f)
+            text = poem_data.get("text", "").strip()
+            author = poem_data.get("author", "Unknown")
+            response = jsonify({"text": text, "author": author})
+            
+            # Add explicit CORS headers
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+            
+            return response
+    except Exception as e:
+        error_response = jsonify({"error": f"Error loading poem: {e}"})
+        
+        # Add CORS headers to error response too
+        error_response.headers['Access-Control-Allow-Origin'] = '*'
+        error_response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        error_response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        
+        return error_response
+
+# Add OPTIONS handler for preflight requests
+@app.route("/current_poem", methods=["OPTIONS"])
+def current_poem_options():
+    response = make_response()
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
 
 @app.route("/missyou")
 def missyou():
