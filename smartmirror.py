@@ -143,14 +143,14 @@ shown_poems = []
 
 def get_override_message():
 	try:
-		response = requests.get("https://smartmirror-app.onrender.com/override", timeout=5)
+		response = requests.get("https://smartmirror-app.onrender.com/override")
 		if response.status_code == 200:
 			data = response.json()
-			return data.get("override", "")
+			return data["override"]
 		else:
-			print(f"Failed to fetch override message: Status {response.status_code}")
-	except requests.exceptions.RequestException as e:
-		print("Error fetching override message:", e)
+			print("Failed to fetch override message: Status ", response.status_code)
+	except Exception as e:
+		print(f"Error fetching override message: {e}")
 	return "" # fallback if error
 
 def rotate_poem():
@@ -254,9 +254,6 @@ def check_override_loop():
 	global current_override_msg, override_active
 	override_msg = get_override_message()
 
-	if override_msg is None:
-		override_msg = ""
-
 	print("override froms erver: ", override_msg)
 	print("current message on screen: ", current_override_msg)
 
@@ -277,7 +274,7 @@ def check_override_loop():
 		current_override_msg = ""
 		fade_in_poem(rotate_poem())
 
-	root.after(15000, check_override_loop) # Check every 10 seconds
+	root.after(15000, check_override_loop) # Check every 15 seconds
 
 # === CALENDAR (BOTTOM LEFT) ===
 calendar_text = tk.StringVar()
