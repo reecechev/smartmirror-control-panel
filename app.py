@@ -24,4 +24,4 @@ def redirect_to_ngrok():
   return "Ngrok URL not available", 503
 
 if __name__ == "__main__":
-app.run(debug=True)
+  app.run(debug=True)
