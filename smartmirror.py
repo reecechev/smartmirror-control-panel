@@ -143,16 +143,15 @@ shown_poems = []
 
 def get_override_message():
 	try:
-		response = requests.get("https://smartmirror-app.onrender.com/override")
+		response = requests.get("https://smartmirror-app.onrender.com/override", timeout=5)
 		if response.status_code == 200:
 			data = response.json()
-			return data["override"]
+			return data.get("override", "")
 		else:
-			print("Failed to fetch override message. status: ", response.status_code)
-			return ""
-	except Exception as e:
-		print(f"Error fetching override message: {e}")
-	return ""
+			print(f"Failed to fetch override message: Status {response.status_code}")
+	except requests.exceptions.RequestException as e:
+		print("Error fetching override message:", e)
+	return "" # fallback if error
 
 def rotate_poem():
 	global poem_pool, shown_poems
@@ -204,7 +203,7 @@ def rotate_poem():
 
 	else:
 		label_poem.config(text="No poems found or all too long")
-	root.after(30000, rotate_poem)
+	root.after(300000, rotate_poem)
 
 def fade_out_poem(new_poem, step=0):
 	if step > 10:
@@ -255,6 +254,9 @@ def check_override_loop():
 	global current_override_msg, override_active
 	override_msg = get_override_message()
 
+	if override_msg is None:
+		override_msg = ""
+
 	print("override froms erver: ", override_msg)
 	print("current message on screen: ", current_override_msg)
 
@@ -275,7 +277,7 @@ def check_override_loop():
 		current_override_msg = ""
 		fade_in_poem(rotate_poem())
 
-	root.after(10000, check_override_loop) # Check every 10 seconds
+	root.after(15000, check_override_loop) # Check every 10 seconds
 
 # === CALENDAR (BOTTOM LEFT) ===
 calendar_text = tk.StringVar()
