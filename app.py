@@ -5,7 +5,7 @@ import time
 app = Flask(__name__)
 
 # GitHub Gist raw URL to your smartmirror-link.txt
-GIST_URL = "https://gist.githubusercontent.com/reecechev/27cac80f7e63cc98a10e454427063907/raw/6b48a3b1bf93345e9821037df3e739a993b8e9b1/smartmirror-link.txt"
+GIST_URL = "https://gist.githubusercontent.com/reecechev/27cac80f7e63cc98a10e454427063907/raw/smartmirror-link.txt"
 
 def get_latest_ngrok_url():
   try:
