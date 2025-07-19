@@ -143,7 +143,7 @@ shown_poems = []
 
 def get_override_message():
 	try:
-		response = requests.get("https://smartmirror-app.onrender.com/override")
+		response = requests.get("https://74d1718c0c99.ngrok-free.app/override")
 		if response.status_code == 200:
 			data = response.json()
 			return data["override"]
