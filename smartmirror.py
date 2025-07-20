@@ -7,12 +7,14 @@ import random
 from calendar_display import get_combined_events
 from reminders import reminders
 from app import get_override_message
+from config import get_ngrok_url
 
 API_KEY = "f294f939822e1fc16e1d4cf9bc185be1"
 CITY = "Rochester"
 OVERRIDE_FILE = "/home/pi/smartmirror/poem_override.json"
 current_override_msg = ""
 override_active = False
+ngrokurl = get_ngrok_url()
 
 def get_weather():
 	url = f"http://api.openweathermap.org/data/2.5/forecast?q={CITY}&units=imperial&appid={API_KEY}"
@@ -143,7 +145,8 @@ shown_poems = []
 
 def get_override_message():
 	try:
-		response = requests.get("https://74d1718c0c99.ngrok-free.app/override")
+		override_url = f"{ngrokurl}/override"
+		response = requests.get(override_url)
 		if response.status_code == 200:
 			data = response.json()
 			return data["override"]
@@ -269,10 +272,9 @@ def check_override_loop():
 		)
 		fade_in_poem(current_override_msg)
 	elif not override_msg and override_active:
-		fade_out_poem(current_override_msg)
 		override_active = False
 		current_override_msg = ""
-		fade_in_poem(rotate_poem())
+		rotate_poem()
 
 	root.after(15000, check_override_loop) # Check every 15 seconds
 

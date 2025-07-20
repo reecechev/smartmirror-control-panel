@@ -107,6 +107,42 @@ def current_poem():
 def missyou():
 	return render_template("missyou.html")
 
+def load_missyou_data():
+	with open('missyou.json', 'r') as f:
+		return json.load(f)
+
+def save_missyou_data(data):
+	with open('missyou.json', 'w') as f:
+		json.dump(data, f)
+
+@app.route('/missyou/tap', methods=['POST'])
+def tap_heart():
+	data = load_missyou_data()
+	if 'clicks' not in data:
+		data['clicks'] = 0
+	if 'rings' not in data:
+		data['rings'] = []
+
+	data['clicks'] += 1
+
+	# Every 10 clicks, add a ring
+	if data['clicks'] % 10 == 0:
+		now = datetime.utcnow().isoformat()
+		data['rings'].append(now)
+
+	save_missyou_data(data)
+	return {'clicks': data['clicks'], 'rings': len(data['rings'])}
+
+@app.route('/missyou/status', methods=['GET'])
+def get_active_rings():
+	data = load_missyou_data()
+	now = datetime.utcnow()
+	valid_rings = [
+		r for r in data.get('rings', [])
+		if now - datetime.fromisoformat(r) < timedelta(minutes=30)
+	]
+	return {'active_rings': len(valid_rings)}
+
 @app.route("/poem_override", methods=["POST"])
 def poem_override():
 	msg = request.form.get("override_msg", "")
