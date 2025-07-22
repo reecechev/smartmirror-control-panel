@@ -101,8 +101,8 @@
 			addHeartLayer(heartCount);
 
 			// 🔥 Send POST request to server to register tap
-			fetch('https://smartmirror-control-panel.onrender.com/missyou/tap', {
-				method: 'POST'
+			fetch("/missyou/tap", {
+				method: "POST"
 			}).then(response => {
 				if (response.ok) {
 					console.log("❤️ Heart registered on server!");
