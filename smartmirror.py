@@ -280,7 +280,8 @@ def check_override_loop():
 
 def get_active_heart_rings():
 	try:
-		response = requests.get("http://smartmirror-control-panel.onrender.com/missyou/rings")
+		rings_url = f"{ngrokurl}/missyou/rings"
+		response = requests.get(rings_url)
 		if response.status_code == 200:
 			timestamps = response.json()
 			now = datetime.utcnow()
