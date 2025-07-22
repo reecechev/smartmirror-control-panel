@@ -65,8 +65,8 @@
 			<span style="margin-left: 8px;">Use Override Messages</span>
 		</label>
 
-		<div id="heartContainer">
-			<div id="heartButton" onclick="sendHeart()"></div>
+		<div id="heartContainer" style="position: relative; width: 150px; margin: 20px auto;">
+			<div id="sendHeart" onclick="sendHeart()" style="font-size: 60px; cursor: pointer; position: absolute; top: 50%; transfrom: translate(-50%, -50%);"></div>
 		</div>
 
 		<div style="margin-top: 10px;">
@@ -75,50 +75,41 @@
 	</div>
 
 	<script>
-		let heartCount = 0;
+	let clickCount = 0;
+	let heartCount = localStorage.getItem("heartCount") ? parseInt(localStorage.getItem("heartCount")) : 0;
+	document.getElementById("heartCount").innerText = heartCount;
 
-		function sendHeart() {
+	function sendHeart() {
+		clickCount++;
+		if (clickCount % 10 === 0) {
 			heartCount++;
 			document.getElementById("heartCount").innerText = heartCount;
-
-			// Add ring every 10 clicks
-			if (heartCount % 10 === 0) {
-				addRing(heartCount / 10);
-			}
+			localStorage.setItem("heartCount", heartCount);
+			addHeartRing(heartCount);
 		}
+	}
 
-		function addRing(ringNum) {
-			const ring = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-			const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-
-			const scale = 1 + ringNum * 0.2;
-
-			ring.setAttribute("viewBox", "0 0 100 100");
-			ring.setAttribute("class", "heart-outline");
-			ring.style.transform = `scale(${scale})`;
-			ring.style.transformOrigin = "center";
-
-			path.setAttribute("d", "M30 0 C50 0, 80 60, 30 90 C-20 60, -0 0, 30 0 Z");
-			ring.appendChild(path);
-
-			document.getElementById("heartContainer").appendChild(ring);
-
-			// Remove after 30 minutes
-			setTimeout(() => {
-				ring.remove();
-			}, 1800000);
-		}
-
-		function toggleOverride() {
-			const override = document.getElementById("overrideToggle").checked;
-			fetch("/override-toggle", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify({ use_override: override })
-			});
-		}
+	function addHeartRing(ringNum) {
+		const heart = document.createElement('div');
+		heart.innerText = '❤️';
+		heart.style.position = 'absolute';
+		heart.style.fontSize = `${60 + ringNum * 10}px`;
+		heart.style.opacity = '0.5';
+		heart.style.top = '50%';
+		heart.style.left = '50%';
+		heart.style.transform = 'translate(-50%, -50%)';
+		heart.style.pointerEvents = 'none';
+		heart.className = 'heart-ring';
+	
+		document.getElementById("heart-container").appendChild(heart);
+	
+		setTimeout(() => {
+			heart.remove();
+			heartCount--;
+			localStorage.setItem("heartCount", heartCount);
+			document.getElementById("heartCount").innerText = heartCount;
+		}, 1800000); // 30 minutes
+	}
 	</script>
 </body>
 </html>
