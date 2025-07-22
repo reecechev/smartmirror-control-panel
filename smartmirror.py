@@ -280,7 +280,7 @@ def check_override_loop():
 
 def get_active_heart_rings():
 	try:
-		response = requests.get("http://localhost:5000/missyou/rings")
+		response = requests.get("http://smartmirror-control-panel.onrender.com/missyou/rings")
 		if response.status_code == 200:
 			timestamps = response.json()
 			now = datetime.utcnow()
@@ -305,6 +305,8 @@ def update_hearts():
 			heart.place(x=100, y=700 - i * 40) # Adjust position if needed
 	except Exception as e:
 		print("Error updating hearts:", e)
+
+	root.after(1000, update_hearts)
 
 # === CALENDAR (BOTTOM LEFT) ===
 calendar_text = tk.StringVar()
