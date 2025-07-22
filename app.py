@@ -132,9 +132,6 @@ def tap_heart():
 
 	data['clicks'] += 1
 
-	# ✅ Print debug info
-	print(f"Click registered! Count = {data['clicks']}")
-
 	# Every 10 clicks, add a ring
 	if data['clicks'] % 10 == 0:
 		now = datetime.utcnow().isoformat()

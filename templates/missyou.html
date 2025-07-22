@@ -99,6 +99,19 @@
 			document.getElementById("heartCount").innerText = heartCount;
 			localStorage.setItem("heartCount", heartCount);
 			addHeartLayer(heartCount);
+
+			// 🔥 Send POST request to server to register tap
+			fetch('https://smartmirror-control-panel.onrender.com/missyou/tap', {
+				method: 'POST'
+			}).then(response => {
+				if (response.ok) {
+					console.log("❤️ Heart registered on server!");
+				} else {
+					console.error("Failed to send heart to server");
+				}
+			}).catch(error => {
+				console.error("Network error:", error);
+			});
 		}
 	}
 
