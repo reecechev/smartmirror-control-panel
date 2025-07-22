@@ -118,17 +118,28 @@ def save_missyou_data(data):
 @app.route("/missyou/tap", methods=["POST"])
 def tap_heart():
 	data = load_missyou_data()
+
 	if 'clicks' not in data:
 		data['clicks'] = 0
 	if 'rings' not in data:
 		data['rings'] = []
 
+	# 🔒 Ensure it's a real number, not string
+	try:
+		data['clicks'] = int(data['clicks'])
+	except:
+		data['clicks'] = 0
+
 	data['clicks'] += 1
+
+	# ✅ Print debug info
+	print(f"Click registered! Count = {data['clicks']}")
 
 	# Every 10 clicks, add a ring
 	if data['clicks'] % 10 == 0:
 		now = datetime.utcnow().isoformat()
 		data['rings'].append(now)
+		print(f"🎯 Ring added at {now}")
 
 	save_missyou_data(data)
 
