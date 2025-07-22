@@ -115,7 +115,7 @@ def save_missyou_data(data):
 	with open('missyou.json', 'w') as f:
 		json.dump(data, f)
 
-@app.route('/missyou/tap', methods=['POST'])
+@app.route("/missyou/tap", methods=["POST"])
 def tap_heart():
 	data = load_missyou_data()
 	if 'clicks' not in data:
@@ -131,9 +131,13 @@ def tap_heart():
 		data['rings'].append(now)
 
 	save_missyou_data(data)
-	return {'clicks': data['clicks'], 'rings': len(data['rings'])}
 
-@app.route('/missyou/status', methods=['GET'])
+	return jsonify({
+		'clicks': data['clicks'],
+		'rings': len(data['rings'])
+	})
+
+@app.route("/missyou/status", methods=["GET"])
 def get_active_rings():
 	data = load_missyou_data()
 	now = datetime.utcnow()
@@ -141,7 +145,12 @@ def get_active_rings():
 		r for r in data.get('rings', [])
 		if now - datetime.fromisoformat(r) < timedelta(minutes=30)
 	]
-	return {'active_rings': len(valid_rings)}
+	return jsonify({'active_rings': len(valid_rings)})
+
+@app.route("/missyou/rings", methods=["GET"])
+def get_ring_timestamps():
+	data = load_missyou_data()
+	return jsonify(data.get("rings", []))
 
 @app.route("/poem_override", methods=["POST"])
 def poem_override():

@@ -1,7 +1,7 @@
 import tkinter as tk
 import requests
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import random
 from calendar_display import get_combined_events
@@ -278,6 +278,34 @@ def check_override_loop():
 
 	root.after(15000, check_override_loop) # Check every 15 seconds
 
+def get_active_heart_rings():
+	try:
+		response = requests.get("http://localhost:5000/missyou/rings")
+		if response.status_code == 200:
+			timestamps = response.json()
+			now = datetime.utcnow()
+			active_rings = 0
+			for i, ts in enumerate(timestamps):
+				ring_time = datetime.fromisoformat(ts)
+				elapsed = now - ring_time
+				if elapsed < timedelta(minutes=30):
+					active_rings += 1
+			return active_rings
+		else:
+			return 0
+	except Exception as e:
+		print("Error fetching heart data:", e)
+		return 0
+
+def update_hearts():
+	try:
+		active_hearts = get_active_heart_rings()
+		for i in range(active_hearts):
+			heart = tk.Label(root, text="❤️", font=("URW Gothic L", 24 + i * 4), fg="red", bg="black")
+			heart.place(x=100, y=700 - i * 40) # Adjust position if needed
+	except Exception as e:
+		print("Error updating hearts:", e)
+
 # === CALENDAR (BOTTOM LEFT) ===
 calendar_text = tk.StringVar()
 label_calendar_title = tk.Label(root, text="Calendar", fg=COLOR, bg=BG, font=font_medium, anchor="sw")
@@ -306,5 +334,6 @@ rotate_poem()
 check_override_loop()
 update_reminders()
 update_calendar()
+update_hearts()
 
 root.mainloop()
