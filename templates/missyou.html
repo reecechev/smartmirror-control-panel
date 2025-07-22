@@ -13,9 +13,15 @@
 
 		.heart-ring {
 			position: absolute;
-			border: 2px solid red;
-			border-radius: 50%;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			fill: none;
+			stroke: red;
+			stroke-width: 2px;
 			opacity: 0.5;
+			pointer-events: none;
 			animation: fadeout 30s linear forwards;
 		}
 		
@@ -58,15 +64,14 @@
 			<input type="checkbox" id="overrideToggle" onchange="toggleOverride()" />
 			<span style="margin-left: 8px;">Use Override Messages</span>
 		</label>
-	
-		<!-- Heart Container -->
-		<div id="heart-container" style="position: relative; width: 150px; height: 150px; margin: 20px auto;">
-			<div id="heart" onclick="sendHeart()" style="font-size: 60px; cursor: pointer;">❤️</div>
-		<!-- Rings will be added here -->
+
+		<div id="heartContainer">
+			<div id="heartButton" onclick="sendHeart()"></div>
 		</div>
 
-		<!-- Hearts Sent Counter -->
-		<div style="margin-top: 10px;">❤️ Hearts Sent: <span id="heartCount">0</span></div>
+		<div style="margin-top: 10px;">
+			❤️ Hearts Sent: <span id="heartCount">0</span>
+		</div>
 	</div>
 
 	<script>
@@ -83,24 +88,22 @@
 		}
 
 		function addRing(ringNum) {
-			const ring = document.createElement('div');
-			const size = 100 + ringNum * 20; // Grow with each ring
-			ring.style.position = 'absolute';
-			ring.style.top = '50%';
-			ring.style.left = '50%';
-			ring.style.width = `${size}px`;
-			ring.style.height = `${size}px`;
-			ring.style.marginLeft = `-${size / 2}px`;
-			ring.style.marginTop = `-${size / 2}px`;
-			ring.style.border = '2px solid red';
-			ring.style.borderRadius = '50%';
-			ring.style.opacity = '0.5';
-			ring.style.pointerEvents = 'none';
-			ring.className = 'heart-ring';
+			const ring = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+			const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
 
-			document.getElementById('heart-container').appendChild(ring);
+			const scale = 1 + ringNum * 0.2;
 
-			// Remove after 30 minutes (1800000ms)
+			ring.setAttribute("viewBox", "0 0 100 100");
+			ring.setAttribute("class", "heart-outline");
+			ring.style.transform = `scale(${scale})`;
+			ring.style.transformOrigin = "center";
+
+			path.setAttribute("d", "M30 0 C50 0, 80 60, 30 90 C-20 60, -0 0, 30 0 Z");
+			ring.appendChild(path);
+
+			document.getElementById("heartContainer").appendChild(ring);
+
+			// Remove after 30 minutes
 			setTimeout(() => {
 				ring.remove();
 			}, 1800000);
@@ -110,7 +113,9 @@
 			const override = document.getElementById("overrideToggle").checked;
 			fetch("/override-toggle", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json"
+				},
 				body: JSON.stringify({ use_override: override })
 			});
 		}
