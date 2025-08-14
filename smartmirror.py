@@ -52,6 +52,17 @@ root.configure(bg="black")
 root.attributes('-fullscreen', True)
 root.config(cursor="none")
 
+# --- Hearts: where to draw them (20 distinct spots) ---
+# tweak later, but this will spread them across the lower-right quadrant
+HEART_POSITIONS = [
+(900, 700), (960, 700), (1020, 700), (1080, 700), (1140, 700),
+(900, 650), (960, 650), (1020, 650), (1080, 650), (1140, 650),
+(900, 600), (960, 600), (1020, 600), (1080, 600), (1140, 600),
+(900, 550), (960, 550), (1020, 550), (1080, 550), (1140, 550),
+]
+heart_labels = [] # we’ll reuse/destroy these each refresh
+
+
 # === Fonts ===
 font_time = ("URW Gothic L", 100)
 font_temp = ("URW Gothic L", 70)
@@ -280,34 +291,48 @@ def check_override_loop():
 
 def get_active_heart_rings():
 	try:
-		rings_url = f"{ngrokurl}/missyou/rings"
-		response = requests.get(rings_url)
-		if response.status_code == 200:
-			timestamps = response.json()
-			now = datetime.utcnow()
-			active_rings = 0
-			for i, ts in enumerate(timestamps):
-				ring_time = datetime.fromisoformat(ts)
-				elapsed = now - ring_time
-				if elapsed < timedelta(minutes=30):
-					active_rings += 1
-			return active_rings
-		else:
-			return 0
+		url = f"{ngrokurl}/imissyou/status"
+		r = requests.get(url, timeout=5)
+		r.raise_for_status()
+		data = r.json()
+		return int(data.get("active_rings", 0))
 	except Exception as e:
 		print("Error fetching heart data:", e)
 		return 0
 
 def update_hearts():
+	global heart_labels
+
 	try:
-		active_hearts = get_active_heart_rings()
-		for i in range(active_hearts):
-			heart = tk.Label(root, text="❤️", font=("URW Gothic L", 24 + i * 4), fg="red", bg="black")
-			heart.place(x=100, y=700 - i * 40) # Adjust position if needed
+		count = get_active_heart_rings()
 	except Exception as e:
 		print("Error updating hearts:", e)
+		count = 0
 
-	root.after(1000, update_hearts)
+	# 1) clear existing labels so they don't stack
+	for lbl in heart_labels:
+		try:
+			lbl.destroy()
+		except:
+			pass
+	heart_labels = []
+
+	# 2) draw up to the number of positions we have
+	spots = min(count, len(HEART_POSITIONS))
+	for i in range(spots):
+		x, y = HEART_POSITIONS[i]
+		lbl = tk.Label(
+			root,
+			text="❤",
+			font=("URW Gothic L", 28), # size can be tuned; same for all hearts
+			fg="red",
+			bg="black",
+		)
+		lbl.place(x=x, y=y)
+		heart_labels.append(lbl)
+
+	# schedule next refresh
+	root.after(1000, update_hearts) # refresh every second
 
 # === CALENDAR (BOTTOM LEFT) ===
 calendar_text = tk.StringVar()

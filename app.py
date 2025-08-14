@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from flask import Flask, render_template, request, redirect, make_response
 import json
 from flask_cors import CORS
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 CORS(app)
@@ -119,30 +120,25 @@ def save_missyou_data(data):
 def tap_heart():
 	data = load_missyou_data()
 
-	if 'clicks' not in data:
-		data['clicks'] = 0
-	if 'rings' not in data:
-		data['rings'] = []
+	if "clicks" not in data:
+		data["clicks"] = 0
+	if "rings" not in data:
+		data["rings"] = []
 
-	# 🔒 Ensure it's a real number, not string
-	try:
-		data['clicks'] = int(data['clicks'])
-	except:
-		data['clicks'] = 0
-
-	data['clicks'] += 1
+	# Increment clicks first
+	data["clicks"] += 1
 
 	# Every 10 clicks, add a ring
-	if data['clicks'] % 10 == 0:
+	if data["clicks"] % 10 == 0:
 		now = datetime.utcnow().isoformat()
-		data['rings'].append(now)
-		print(f"🎯 Ring added at {now}")
+		data["rings"].append(now)
+		print(f"[💖] Ring added at {now}")
 
 	save_missyou_data(data)
 
 	return jsonify({
-		'clicks': data['clicks'],
-		'rings': len(data['rings'])
+		"clicks": data["clicks"],
+		"rings": len(data["rings"])
 	})
 
 @app.route("/missyou/status", methods=["GET"])
