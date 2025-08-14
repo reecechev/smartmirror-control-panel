@@ -291,7 +291,7 @@ def check_override_loop():
 
 def get_active_heart_rings():
 	try:
-		url = f"{ngrokurl}/imissyou/status"
+		url = f"{ngrokurl}/missyou/status"
 		r = requests.get(url, timeout=5)
 		r.raise_for_status()
 		data = r.json()

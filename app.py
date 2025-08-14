@@ -141,15 +141,24 @@ def tap_heart():
 		"rings": len(data["rings"])
 	})
 
-@app.route("/missyou/status", methods=["GET"])
-def get_active_rings():
-	data = load_missyou_data()
-	now = datetime.utcnow()
-	valid_rings = [
-		r for r in data.get('rings', [])
-		if now - datetime.fromisoformat(r) < timedelta(minutes=30)
-	]
-	return jsonify({'active_rings': len(valid_rings)})
+@app.route("/missyou/status")
+def missyou_status():
+	try:
+		with open("missyou.json", "r") as f:
+			data = json.load(f)
+		now = datetime.utcnow()
+		active_rings = 0
+		for ts in data.get("rings", []):
+			try:
+				ring_time = datetime.fromisoformat(ts.replace("Z", "").split(".")[0]) # strip microseconds/Z
+			except Exception:
+				continue
+			elapsed = (now - ring_time).total_seconds() / 60
+			if elapsed <= 30:
+				active_rings += 1
+		return jsonify({"active_rings": active_rings})
+	except Exception as e:
+		return jsonify({"error": str(e)})
 
 @app.route("/missyou/rings", methods=["GET"])
 def get_ring_timestamps():
