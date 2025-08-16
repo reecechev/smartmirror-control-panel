@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, make_response
 import json
 from flask_cors import CORS
 from datetime import datetime, timedelta
+from config import get_ngrok_url
 
 app = Flask(__name__)
 CORS(app)
@@ -164,6 +165,11 @@ def missyou_status():
 def get_ring_timestamps():
 	data = load_missyou_data()
 	return jsonify(data.get("rings", []))
+
+@app.route("/ngrok", methods=["GET"])
+def ngrok_base():
+	# returns public base used by mirror
+	return jsonify({"base": get_ngrok_url()})
 
 @app.route("/poem_override", methods=["POST"])
 def poem_override():

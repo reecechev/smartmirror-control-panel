@@ -55,10 +55,10 @@ root.config(cursor="none")
 # --- Hearts: where to draw them (20 distinct spots) ---
 # tweak later, but this will spread them across the lower-right quadrant
 HEART_POSITIONS = [
-(900, 700), (960, 700), (1020, 700), (1080, 700), (1140, 700),
-(900, 650), (960, 650), (1020, 650), (1080, 650), (1140, 650),
-(900, 600), (960, 600), (1020, 600), (1080, 600), (1140, 600),
-(900, 550), (960, 550), (1020, 550), (1080, 550), (1140, 550),
+	(900, 700), (960, 700), (1020, 700), (1080, 700), (1140, 700),
+	(900, 650), (960, 650), (1020, 650), (1080, 650), (1140, 650),
+	(900, 600), (960, 600), (1020, 600), (1080, 600), (1140, 600),
+	(900, 550), (960, 550), (1020, 550), (1080, 550), (1140, 550),
 ]
 heart_labels = [] # we’ll reuse/destroy these each refresh
 
@@ -304,7 +304,7 @@ def update_hearts():
 	global heart_labels
 
 	try:
-		count = get_active_heart_rings()
+		count = 3
 	except Exception as e:
 		print("Error updating hearts:", e)
 		count = 0
