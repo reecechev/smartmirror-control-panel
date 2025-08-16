@@ -85,48 +85,6 @@
 			❤️ Hearts Sent: <span id="heartCount">0</span>
 		</div>
 	</div>
-
-	<script>
-		// --- persistent counters (survive reloads in your own browser) ---
-		let clickCount = localStorage.getItem("clickCount")
-			? parseInt(localStorage.getItem("clickCount"))
-			: 0;
-
-		let heartCount = localStorage.getItem("heartCount")
-			? parseInt(localStorage.getItem("heartCount"))
-			: 0;
-
-		// show current heart count in the UI, if you have <span id="heartCount">
-		const hcEl = document.getElementById("heartCount");
-		if (hcEl) hcEl.innerText = heartCount;
-
-		function sendHeart() {
-			// 1) increment locally on EVERY tap
-			clickCount += 1;
-			localStorage.setItem("clickCount", clickCount);
-
-			// 2) every 10 taps, add a visible heart layer in the page
-			if (clickCount % 10 === 0) {
-				heartCount += 1;
-				if (hcEl) hcEl.innerText = heartCount;
-				localStorage.setItem("heartCount", heartCount);
-				addHeartLayer(heartCount);
-			}
-
-			// 3) ALWAYS notify the server on EVERY tap (this is what the mirror reads)
-			fetch('/missyou/tap', { method: 'POST' })
-			.then(res => {
-				if (!res.ok) throw new Error('server response not ok');
-				return res.json().catch(() => ({}));
-			})
-			.then(data => {
-				// optional: you can reconcile with server here if you want later
-				console.log('[tap] sent OK');
-			})
-			.catch(err => {
-				console.error('Network/server error', err);
-			});
-		}
 	<script>
 		// --- get live API base from the server (no hard-coding) ---
 		async function getBase() {
