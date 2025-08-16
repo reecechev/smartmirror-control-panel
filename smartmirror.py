@@ -304,7 +304,7 @@ def update_hearts():
 	global heart_labels
 
 	try:
-		count = 3
+		count = get_active_heart_rings()
 	except Exception as e:
 		print("Error updating hearts:", e)
 		count = 0

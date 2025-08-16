@@ -127,6 +127,69 @@
 				console.error('Network/server error', err);
 			});
 		}
+	<script>
+		// --- get live API base from the server (no hard-coding) ---
+		async function getBase() {
+			try {
+				// Works on Render too (handles its redirect automatically)
+				const res = await fetch('/ngrok', { redirect: 'follow' });
+				if (!res.ok) throw new Error('bad status');
+				const data = await res.json();
+				if (data && data.base) return String(data.base).replace(/\/+$/, '');
+			} catch (e) {
+				console.warn('Falling back to current origin for API base:', e);
+			}
+			// Fallback to the same origin if /ngrok is unreachable
+			return window.location.origin.replace(/\/+$/, '');
+		}
+
+		// unified helper to call the API with the resolved base
+		let BASE = null;
+		function api(path, options) {
+			const p = path.startsWith('/') ? path : `/${path}`;
+			return fetch(`${BASE}${p}`, options);
+		}
+
+		// --- persistent counters (in your own browser only) ---
+		let clickCount = localStorage.getItem("clickCount")
+			? parseInt(localStorage.getItem("clickCount"))
+			: 0;
+
+		let heartCount = localStorage.getItem("heartCount")
+			? parseInt(localStorage.getItem("heartCount"))
+			: 0;
+
+		const hcEl = document.getElementById("heartCount");
+		if (hcEl) hcEl.innerText = heartCount;
+
+		// initialize BASE once the page loads
+		(async function init() {
+			BASE = await getBase();
+			console.log('API base:', BASE);
+		})();
+
+		// --- tap handler: ALWAYS POST; add a visual heart every 10 taps ---
+		function sendHeart() {
+			// 1) local click counter
+			clickCount += 1;
+			localStorage.setItem("clickCount", clickCount);
+
+			// 2) visual heart every 10 taps
+			if (clickCount % 10 === 0) {
+			heartCount += 1;
+			if (hcEl) hcEl.innerText = heartCount;
+			localStorage.setItem("heartCount", heartCount);
+			addHeartLayer(heartCount);
+		}
+
+		// 3) notify server on EVERY tap (mirror reads from here)
+		api('/missyou/tap', { method: 'POST' })
+		.then(res => {
+			if (!res.ok) throw new Error('server not ok');
+			return res.json().catch(() => ({}));
+		})
+		.catch(err => console.error('Network/server error', err));
+		}
 
 		function addHeartLayer(ringNum) {
 			const ring = document.createElement('div');
