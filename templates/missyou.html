@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<meta name="viewport"
+	content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
@@ -53,6 +56,34 @@
 			margin-bottom: 10px;
 			font-weight: bold;
 		}
+
+		html, body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			overflow: hidden; /* prevent scrolling/bounce */
+			touch-action: manipulation; /* no pinch/pan gestures */
+			-ms-touch-action: manipulation;
+			-webkit-text-size-adjust: 100%; /* stop iOS auto zooming text */
+		}
+
+		* {
+			-webkit-tap-highlight-color: transparent; /* remove iOS tap flash */
+			-webkit-touch-callout: none; /* no callout on long press */
+			-webkit-user-select: none;
+			user-select: none; /* stop accidental text selection */
+		}
+
+		#app, .page, .container { /* whichever top wrapper you use */
+			position: fixed; /* pin the UI “in place” */
+			inset: 0; /* top:0; right:0; bottom:0; left:0 */
+			overflow: hidden; /* no scroll within */
+		}
+
+		button, .btn, #heartButton {
+			touch-action: manipulation; /* faster taps, no double‑tap zoom */
+		}
+
 	</style>
 </head>
 <body style="background-color: #121212; color: white; font-family: Arial, sans-serif;">
@@ -170,6 +201,18 @@
 				try { ring.remove(); } catch(e) {}
 			}, 1800000);
 		}
+	</script>
+
+	<script>
+		// Prevent iOS Safari double‑tap zoom
+		(function () {
+			let last = 0;
+			window.addEventListener('touchend', function (e) {
+				const now = Date.now();
+				if (now - last <= 300) e.preventDefault();
+				last = now;
+			}, { passive: false });
+		})();
 	</script>
 
 </body>
