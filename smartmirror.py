@@ -62,6 +62,7 @@ HEART_POSITIONS = [
 ]
 heart_labels = [] # we’ll reuse/destroy these each refresh
 
+prev_heart_count = None
 
 # === Fonts ===
 font_time = ("URW Gothic L", 100)
@@ -301,38 +302,40 @@ def get_active_heart_rings():
 		return 0
 
 def update_hearts():
-	global heart_labels
+	# draw only when the count changes (prevents blinking)
+	global heart_labels, prev_heart_count
 
 	try:
 		count = get_active_heart_rings()
-	except Exception as e:
-		print("Error updating hearts:", e)
+	except Exception:
 		count = 0
 
-	# 1) clear existing labels so they don't stack
-	for lbl in heart_labels:
-		try:
-			lbl.destroy()
-		except:
-			pass
-	heart_labels = []
+	# if no change, do nothing (no destroy/recreate)
+	if prev_heart_count == count:
+		root.after(1000, update_hearts) # keep polling
+		return
 
-	# 2) draw up to the number of positions we have
-	spots = min(count, len(HEART_POSITIONS))
-	for i in range(spots):
+	# clamp to available positions
+	target = min(int(count), len(HEART_POSITIONS))
+	current = len(heart_labels)
+
+	# add missing hearts
+	for i in range(current, target):
 		x, y = HEART_POSITIONS[i]
-		lbl = tk.Label(
-			root,
-			text="❤",
-			font=("URW Gothic L", 28), # size can be tuned; same for all hearts
-			fg="red",
-			bg="black",
-		)
+		lbl = tk.Label(root, text="❤", font=("URW Gothic L", 28), fg="red", bg="black")
 		lbl.place(x=x, y=y)
 		heart_labels.append(lbl)
 
-	# schedule next refresh
-	root.after(1000, update_hearts) # refresh every second
+	# remove extra hearts (from the end)
+	for _ in range(current - 1, target - 1, -1):
+		try:
+			heart_labels[-1].destroy()
+		except:
+			pass
+		heart_labels.pop()
+
+	prev_heart_count = count
+	root.after(1000, update_hearts)
 
 # === CALENDAR (BOTTOM LEFT) ===
 calendar_text = tk.StringVar()

@@ -86,52 +86,62 @@
 		</div>
 
 		<div style="margin-top: 10px;">
-			<form action="https://74d1718c0c99.ngrok-free.app/favorite_poem" method="POST" style="display:inline;">
+			<form id="favForm" method="POST" style="display:inline;">
 				<button type="submit" class="small-button" title="Favorite">❤</button>
 			</form>
-			<form action="https://74d1718c0c99.ngrok-free.app/remove_poem" method="POST" style="display:inline;">
+
+			<form id="removeForm" method="POST" style="display:inline;">
 				<button type="submit" class="small-button" title="Remove">✖</button>
 			</form>
 		</div>
 
-		<script>
-			function updateCurrentPoem() {
-				fetch("https://74d1718c0c99.ngrok-free.app/current_poem", {
-					method: 'GET',
-					headers: {
-						'ngrok-skip-browser-warning': 'true'
-					}
-				})
-			        .then(response => {
-			        	if (!response.ok) {
-			                	throw new Error(`HTTP error! status: ${response.status}`);
-			            	}
-			        	return response.json();
-			        })
-			        .then(data => {
-			        	console.log("Poem loaded:", data);
-			            
-			        	// Update poem text
-			        	document.getElementById("poemText").textContent = data.text;
-			            
-			        	// Update author (don't add extra dash since it's already in the data)
-			        	document.getElementById("poemAuthor").textContent = data.author;
-			        })
-			        .catch(error => {
-			        	console.error("Fetch error:", error);
-			            
-			        	// Show error in the UI
-			        	document.getElementById("poemText").textContent = "Error loading poem";
-			        	document.getElementById("poemAuthor").textContent = "";
-			        });
-}
+	<script>
+		// Get the live public base (ngrok) from the server (works on Render)
+		async function getBase() {
+			try {
+				const res = await fetch('/ngrok', { redirect: 'follow' });
+				if (!res.ok) throw new Error('status ' + res.status);
+				const data = await res.json();
+				if (data && data.base) return String(data.base).replace(/\/+$/, '');
+			} catch (e) {
+				console.warn('Falling back to current origin:', e);
+			}
+			return window.location.origin.replace(/\/+$/, '');
+		}
+	
+		let BASE = null;
 
-// Initial load
-updateCurrentPoem();
+		// Point the forms at the live base (no hard-coding)
+		function wireForms() {
+			const fav = document.getElementById('favForm');
+			const rem = document.getElementById('removeForm');
+			if (fav) fav.action = `${BASE}/favorite_poem`;
+			if (rem) rem.action = `${BASE}/remove_poem`;
+		}
 
-// Refresh every 5 seconds
-setInterval(updateCurrentPoem, 5000);
-		</script>
+		// Load the current poem from the live base
+		async function updateCurrentPoem() {
+			try {
+				const res = await fetch(`${BASE}/current_poem`, { method: 'GET' });
+				if (!res.ok) throw new Error('status ' + res.status);
+				const data = await res.json();
+				document.getElementById('poemText').textContent = data.text || '—';
+				document.getElementById('poemAuthor').textContent = data.author || '';
+			} catch (err) {
+				console.error('Fetch error:', err);
+				document.getElementById('poemText').textContent = 'Error loading poem';
+				document.getElementById('poemAuthor').textContent = '';
+			}
+		}
+
+		// Init on page load: get base, wire forms, load & refresh poem
+		(async function init() {
+			BASE = await getBase(); // e.g. https://<current>.ngrok-free.app
+			wireForms();
+			updateCurrentPoem();
+			setInterval(updateCurrentPoem, 5000);
+		})();
+	</script>
 
 	</div>
 
