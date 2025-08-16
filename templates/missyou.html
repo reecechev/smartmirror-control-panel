@@ -176,19 +176,19 @@
 
 			// 2) visual heart every 10 taps
 			if (clickCount % 10 === 0) {
-			heartCount += 1;
-			if (hcEl) hcEl.innerText = heartCount;
-			localStorage.setItem("heartCount", heartCount);
-			addHeartLayer(heartCount);
-		}
+				heartCount += 1;
+				if (hcEl) hcEl.innerText = heartCount;
+				localStorage.setItem("heartCount", heartCount);
+				addHeartLayer(heartCount);
+			}
 
-		// 3) notify server on EVERY tap (mirror reads from here)
-		api('/missyou/tap', { method: 'POST' })
-		.then(res => {
-			if (!res.ok) throw new Error('server not ok');
-			return res.json().catch(() => ({}));
-		})
-		.catch(err => console.error('Network/server error', err));
+			// 3) notify server on EVERY tap (mirror reads from here)
+			api('/missyou/tap', { method: 'POST' })
+				.then(res => {
+					if (!res.ok) throw new Error('server not ok');
+					return res.json().catch(() => ({}));
+				})
+				.catch(err => console.error('Network/server error', err));
 		}
 
 		function addHeartLayer(ringNum) {
