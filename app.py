@@ -83,7 +83,7 @@ def save_reminders(reminders):
 		json.dump(reminders, f)
 
 @app.route("/flowers", methods=["GET"])
-def flwoers_page():
+def flowers_page():
 	return render_template("flowers.html")
 
 @app.route("/flower/current", methods=["GET"])
