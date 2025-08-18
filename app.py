@@ -1,9 +1,12 @@
 from flask import Flask, request, jsonify, render_template
 from flask import Flask, render_template, request, redirect, make_response
-import json
+import os, json
 from flask_cors import CORS
 from datetime import datetime, timedelta
 from config import get_ngrok_url
+from zoneinfo import ZoneInfo
+from flask import send_from_directory
+from pathlib import Path
 
 app = Flask(__name__)
 CORS(app)
@@ -16,6 +19,55 @@ REMINDERS_FILE = "reminders.json"
 POEMS_FILE = "poems.json"
 OVERRIDE_FILE = "poem_override.json"
 
+# ---- Flowers config ----
+FLOWER_FOLDER = os.path.join(os.path.dirname(__file__), "static", "flowers")
+os.makedirs(FLOWER_FOLDER, exist_ok=True)
+
+FLOWER_STATE_PATH = os.path.join(os.path.dirname(__file__), "flowers_state.json")
+TZ_NY = ZoneInfo("America/New_York")
+
+def _list_flowers_from_disk():
+	"""Return [{'name','file'}] for images in static/flowers."""
+	items = []
+	for p in sorted(Path(FLOWER_FOLDER).glob("*.*")):
+		if p.suffix.lower() not in {".png", ".jpg", ".jpeg"}:
+			continue
+		nice = p.stem.replace("_", " ").title()
+		items.append({"name": nice, "file": p.name})
+	return items
+
+def _load_flower_state():
+	try:
+		with open(FLOWER_STATE_PATH, "r", encoding="utf-8") as f:
+			return json.load(f)
+	except Exception:
+		return {"index": 0, "changed_at": datetime.now(TZ_NY).isoformat()}
+
+def _save_flower_state(state):
+	with open(FLOWER_STATE_PATH, "w", encoding="utf-8") as f:
+		json.dump(state, f, indent=2)
+
+def _next_wed_9am(after_dt):
+	dt = after_dt.astimezone(TZ_NY)
+	while dt.weekday() != 2: # Wednesday = 2
+		dt += timedelta(days=1)
+	due = dt.replace(hour=9, minute=0, second=0, microsecond=0)
+	if due <= after_dt.astimezone(TZ_NY):
+		due += timedelta(days=7)
+	return due
+
+def _maybe_rotate_weekly(state, now_et):
+	try:
+		changed_at = datetime.fromisoformat(state.get("changed_at")).astimezone(TZ_NY)
+	except Exception:
+		changed_at = now_et
+	due = _next_wed_9am(changed_at)
+	if now_et >= due:
+		state["index"] = (int(state.get("index", 0)) + 1) % len(FLOWERS)
+		state["changed_at"] = now_et.isoformat()
+		_save_flower_state(state)
+	return state
+
 def load_reminders():
 	try:
 		with open(REMINDERS_FILE, "r") as f:
@@ -26,6 +78,45 @@ def load_reminders():
 def save_reminders(reminders):
 	with open(REMINDERS_FILE, "w") as f:
 		json.dump(reminders, f)
+
+@app.route("/flower/current", methods=["GET"])
+def flower_current():
+	base = get_ngrok_url().rstrip("/")
+	now_et = datetime.now(TZ_NY)
+
+	flowers = _list_flowers_from_disk()
+	if not flowers:
+		return jsonify({"error": "No flower images found"}), 503
+
+	state = _load_flower_state()
+	state = _maybe_rotate_weekly(state, now_et)
+
+	idx = int(state.get("index", 0)) % len(flowers)
+	flower = flowers[idx]
+	flower_url = f"{base}/static/flowers/{flower['file']}"
+	return jsonify({"name": flower["name"], "file": flower["file"], "url": flower_url})
+
+
+@app.route("/flower/list", methods=["GET"])
+def flower_list():
+	return jsonify(_list_flowers_from_disk())
+
+
+@app.route("/flower/next", methods=["POST"])
+def flower_next():
+	flowers = _list_flowers_from_disk()
+	if not flowers:
+		return jsonify({"error": "No flower images found"}), 503
+
+	state = _load_flower_state()
+	state["index"] = (int(state.get("index", 0)) + 1) % len(flowers)
+	state["changed_at"] = datetime.now(TZ_NY).isoformat()
+	_save_flower_state(state)
+	return jsonify(state)
+
+@app.route("/static/flowers/<path:filename>")
+def flowers_static(filename):
+	return send_from_directory(FLOWER_FOLDER, filename)
 
 @app.route("/poems", methods=["GET"])
 def poems():

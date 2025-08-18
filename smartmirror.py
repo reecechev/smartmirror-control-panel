@@ -8,6 +8,9 @@ from calendar_display import get_combined_events
 from reminders import reminders
 from app import get_override_message
 from config import get_ngrok_url
+import io
+from PIL import Image, ImageTk
+import math
 
 API_KEY = "f294f939822e1fc16e1d4cf9bc185be1"
 CITY = "Rochester"
@@ -121,9 +124,11 @@ label_reminders.place(relx=1.0, y=100, x=-PADDING, anchor="ne")
 
 def get_reminders():
 	try:
-		response = requests.get("https://smartmirror-app.onrender.com/reminders")
-		response.raise_for_status()
-		return response.json()
+		base = get_ngrok_url().rstrip("/")
+		url = f"{base}/reminders"
+		r = requests.get(url, timeout=6)
+		r.raise_for_status()
+		return r.json() # should be a list of strings
 	except Exception as e:
 		print("Error fetching reminders:", e)
 		return ["Error loading reminders."]
@@ -337,26 +342,79 @@ def update_hearts():
 	prev_heart_count = count
 	root.after(1000, update_hearts)
 
-# === CALENDAR (BOTTOM LEFT) ===
-calendar_text = tk.StringVar()
-label_calendar_title = tk.Label(root, text="Calendar", fg=COLOR, bg=BG, font=font_medium, anchor="sw")
-label_calendar = tk.Label(root, textvariable=calendar_text, fg=COLOR, bg=BG, font=font_small, justify="left", anchor="sw", wraplength=500)
+# === FLOWER (BOTTOM LEFT) =========================================
+# Area where we draw the PNG (you can tweak size/position)
+FLOWER_W, FLOWER_H = 280, 280 # drawing box size
+FLOWER_X, FLOWER_Y = PADDING, -100 # bottom-left offsets (was calendar spot)
 
-label_calendar_title.place(x=PADDING, rely=1.0, y=-140, anchor="sw")
-label_calendar.place(x=PADDING, rely=1.0, y=-100, anchor="sw")
+flower_name_var = tk.StringVar(value="")
+flower_canvas = tk.Canvas(root, width=FLOWER_W, height=FLOWER_H, highlightthickness=0, bg=BG)
+flower_label = tk.Label(root, textvariable=flower_name_var, fg=COLOR, bg=BG, font=font_small, anchor="sw")
 
-def update_calendar():
+# place canvas & label (bottom-left)
+flower_canvas.place(x=FLOWER_X, rely=1.0, y=FLOWER_Y, anchor="sw")
+flower_label.place (x=FLOWER_X, rely=1.0, y=FLOWER_Y + 10, anchor="nw")
+
+# Keep references so the image isn't garbage-collected
+_current_flower_photo = None
+_current_flower_url = None
+
+def _fetch_current_flower():
+	"""GET {name, url} from the Pi via ngrok."""
 	try:
-		events = get_combined_events()
-		if not events:
-			calendar_display = "No events today"
-		else:
-			calendar_display = "\n".join(f"• {event}" for event in events)
-			calendar_text.set(calendar_display)
+		base = ngrokurl.rstrip("/")
+		r = requests.get(f"{base}/flower/current", timeout=5)
+		r.raise_for_status()
+		# expected: {"name": "...", "file": "...", "url": "https://.../static/flowers/xxx.png"}
+		return r.json()
 	except Exception as e:
-		calendar_text.set("Calendar error")
+		print("flower: fetch error:", e)
+		return None
 
-	root.after(180000, update_calendar)
+def _load_photo_from_url(url, box_w, box_h):
+	"""Load PNG from URL and scale into (box_w x box_h) preserving aspect."""
+	try:
+		resp = requests.get(url, timeout=8)
+		resp.raise_for_status()
+		img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
+		iw, ih = img.size
+		scale = min(box_w / iw, box_h / ih)
+		nw, nh = max(1, int(iw * scale)), max(1, int(ih * scale))
+		img = img.resize((nw, nh), Image.LANCZOS)
+		return ImageTk.PhotoImage(img)
+	except Exception as e:
+		print("flower: image load error:", e)
+		return None
+
+def update_flower():
+	"""Refresh flower image/name if it changed (polls every 10 minutes)."""
+	global _current_flower_photo, _current_flower_url
+
+	data = _fetch_current_flower()
+	if not data:
+		flower_name_var.set("Flower unavailable")
+		# try again in 5 minutes on error
+		root.after(300000, update_flower)
+		return
+
+	# Update name immediately
+	flower_name_var.set(data.get("name", ""))
+
+	url = data.get("url")
+	if url and url != _current_flower_url:
+		photo = _load_photo_from_url(url, FLOWER_W, FLOWER_H)
+		if photo:
+			_current_flower_url = url
+			_current_flower_photo = photo
+			flower_canvas.delete("all")
+			# center the image in the canvas
+			cx, cy = FLOWER_W // 2, FLOWER_H // 2
+			flower_canvas.create_image(cx, cy, image=_current_flower_photo, anchor="center")
+
+	# poll again in 10 minutes (will pick up weekly rotation or manual next)
+	root.after(600000, update_flower)
+
+# ==================================================================
 
 # === START ALL UPDATES ===
 update_time()
@@ -364,7 +422,8 @@ update_weather()
 rotate_poem()
 check_override_loop()
 update_reminders()
-update_calendar()
 update_hearts()
+update_flower()
+
 
 root.mainloop()
