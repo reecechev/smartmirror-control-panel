@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Flowers</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<style>
+		body { background:#121212; color:#fff; font-family: Segoe UI, system-ui, sans-serif; }
+		.wrap { max-width: 900px; margin: 20px auto; padding: 0 12px; }
+		h1 { margin: 0 0 14px; }
+		.row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; }
+		.card { background:#1d1d1d; border:1px solid #333; border-radius:10px; padding:14px; flex:1 1 280px; }
+		.preview { display:flex; align-items:center; justify-content:center; background:#000; border:1px solid #333; border-radius:8px; height:280px; }
+		.preview img { max-height:260px; max-width:100%; object-fit:contain; }
+		ul { margin: 8px 0 0; padding-left: 18px; }
+		.muted { color:#bbb; font-size: 0.95em; }
+		input[type=file] { display:block; margin:10px 0; }
+		button { cursor:pointer; }
+		a { color:#7dc1ff; }
+	</style>
+</head>
+<body>
+<div class="wrap">
+	<h1>Flowers</h1>
+
+	<div class="row">
+		<!-- Current flower -->
+		<div class="card">
+			<h3 style="margin-top:0;">Current</h3>
+			<div class="preview" id="currentPreview">
+				<span class="muted">Loading preview…</span>
+			</div>
+			<div id="currentName" class="muted" style="margin-top:8px;"></div>
+		</div>
+
+		<!-- Upload -->
+		<div class="card">
+			<h3 style="margin-top:0;">Add a new flower (PNG/JPG)</h3>
+			<form id="uploadForm">
+				<input id="fileInput" name="file" type="file" accept=".png,.jpg,.jpeg" required />
+				<button type="submit">Upload</button>
+				<div id="uploadMsg" class="muted" style="margin-top:8px;"></div>
+			</form>
+			<p class="muted" style="margin-top:10px;">
+				Tip: Prefer transparent PNGs with a white outline for best look on the mirror.
+			</p>
+		</div>
+	</div>
+
+	<!-- Library -->
+	<div class="card" style="margin-top:18px;">
+		<h3 style="margin-top:0;">Available images</h3>
+		<div id="library" class="muted">Loading…</div>
+	</div>
+
+	<p style="margin-top:16px;"><a href="/">← Back to home</a></p>
+</div>
+
+<script>
+	async function fetchJSON(url, opts) {
+		const r = await fetch(url, opts);
+		if (!r.ok) throw new Error("HTTP " + r.status);
+		return r.json();
+	}
+
+	async function loadCurrent() {
+		try {
+			const data = await fetchJSON("/flower/current");
+			const preview = document.getElementById("currentPreview");
+			const name = document.getElementById("currentName");
+			preview.innerHTML = "";
+			const img = document.createElement("img");
+			img.src = data.url; // served by /static/flowers/...
+			img.alt = data.name;
+			preview.appendChild(img);
+			name.textContent = data.name;
+		} catch (e) {
+			document.getElementById("currentPreview").innerHTML = "<span class='muted'>Error loading current flower</span>";
+			document.getElementById("currentName").textContent = "";
+			console.error(e);
+		}
+	}
+
+	async function loadLibrary() {
+		try {
+			const list = await fetchJSON("/flower/list");
+			if (!list.length) {
+				document.getElementById("library").textContent = "No images yet.";
+				return;
+			}
+			const ul = document.createElement("ul");
+			list.forEach(item => {
+				const li = document.createElement("li");
+				li.textContent = item.name + " — " + item.file;
+				ul.appendChild(li);
+			});
+			const lib = document.getElementById("library");
+			lib.innerHTML = "";
+			lib.appendChild(ul);
+		} catch (e) {
+			document.getElementById("library").textContent = "Error loading library.";
+			console.error(e);
+		}
+	}
+
+	// Upload handler
+	document.getElementById("uploadForm").addEventListener("submit", async (ev) => {
+		ev.preventDefault();
+		const msg = document.getElementById("uploadMsg");
+		msg.textContent = "Uploading…";
+		const form = new FormData();
+		const file = document.getElementById("fileInput").files[0];
+		if (!file) { msg.textContent = "Pick a file first."; return; }
+
+		try {
+			const r = await fetch("/flower/upload", { method: "POST", body: form.append("file", file) || form });
+			if (!r.ok) throw new Error("HTTP " + r.status);
+			const data = await r.json();
+			msg.textContent = "Added: " + (data.saved || file.name);
+			// Refresh lists so it appears immediately
+			await loadLibrary();
+			await loadCurrent(); // current won’t change until the weekly rotation, but harmless to refresh
+			document.getElementById("fileInput").value = "";
+		} catch (e) {
+			msg.textContent = "Upload failed.";
+			console.error(e);
+		}
+	});
+
+	// Initial + periodic refresh
+	loadCurrent();
+	loadLibrary();
+	setInterval(loadCurrent, 60_000); // keep in sync (not strictly necessary)
+</script>
+</body>
+</html>

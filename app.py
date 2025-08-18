@@ -7,6 +7,7 @@ from config import get_ngrok_url
 from zoneinfo import ZoneInfo
 from flask import send_from_directory
 from pathlib import Path
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 CORS(app)
@@ -25,6 +26,8 @@ os.makedirs(FLOWER_FOLDER, exist_ok=True)
 
 FLOWER_STATE_PATH = os.path.join(os.path.dirname(__file__), "flowers_state.json")
 TZ_NY = ZoneInfo("America/New_York")
+
+ALLOWED_EXTS = {".png", ".jpg", ".jpeg"}
 
 def _list_flowers_from_disk():
 	"""Return [{'name','file'}] for images in static/flowers."""
@@ -79,6 +82,10 @@ def save_reminders(reminders):
 	with open(REMINDERS_FILE, "w") as f:
 		json.dump(reminders, f)
 
+@app.route("/flowers", methods=["GET"])
+def flwoers_page():
+	return render_template("flowers.html")
+
 @app.route("/flower/current", methods=["GET"])
 def flower_current():
 	base = get_ngrok_url().rstrip("/")
@@ -117,6 +124,30 @@ def flower_next():
 @app.route("/static/flowers/<path:filename>")
 def flowers_static(filename):
 	return send_from_directory(FLOWER_FOLDER, filename)
+
+@app.route("/flower/upload", methods=["POST"])
+def flower_upload():
+	"""
+	Accept a file from a <form> field named 'file', save to static/flowers,
+	and return simple status JSON. Newly uploaded images are auto-included
+	because the rotation reads from disk.
+	"""
+	if "file" not in request.files:
+		return jsonify({"error": "No file part"}), 400
+
+	f = request.files["file"]
+	if f.filename == "":
+		return jsonify({"error": "No selected file"}), 400
+
+	name = secure_filename(f.filename)
+	ext = os.path.splitext(name)[1].lower()
+	if ext not in ALLOWED_EXTS:
+		return jsonify({"error": "Only .png/.jpg allowed"}), 400
+
+	save_path = os.path.join(FLOWER_FOLDER, name)
+	f.save(save_path)
+
+	return jsonify({"status": "ok", "saved": name})
 
 @app.route("/poems", methods=["GET"])
 def poems():
