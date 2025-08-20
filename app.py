@@ -149,6 +149,8 @@ def flower_upload():
 
 	return jsonify({"status": "ok", "saved": name})
 
+
+# ======= POEMS ===========
 @app.route("/poems", methods=["GET"])
 def poems():
 	poems = load_poems()
@@ -177,28 +179,57 @@ def clear_override():
 	except Exception as e:
 		return jsonify({"status": "error", "message": str(e)})
 
-@app.route("/add_poem", methods=["GET", "POST"])
+@app.route("/add_poem", methods=["POST"])
 def add_poem():
+	# Accept JSON or classic form POST
+	payload = request.get_json(silent=True) or request.form
+
+	# Field name compatibility
+	text = (payload.get("text") or payload.get("poem_text") or "").strip()
+	author = (payload.get("author") or "Unknown").strip()
+
+	# display defaults to True; honor legacy checkbox "is_favorite"
+	display = payload.get("display")
+	if isinstance(display, str):
+		display = display.lower() not in ("false", "0", "no", "off")
+	if display is None:
+		display = bool(payload.get("is_favorite", True))
+
+	if not text:
+		if request.is_json:
+			return jsonify({"error": "Poem text is required."}), 400
+		return redirect("/poems")
+
 	poems = load_poems()
-	new_poem = {
-		"text": request.form["poem_text"],
-		"favorite": "is_favorite" in request.form
-	}
-	poems.append(new_poem)
+	poems.append({"text": text, "author": author, "display": display})
 	save_poems(poems)
+
+	if request.is_json:
+		return jsonify({"status": "ok", "count": len(poems)}), 201
 	return redirect("/poems")
 
+# Optional: JSON-friendly alias you can call from curl or the app
+@app.route("/poems/add", methods=["POST"])
+def poems_add():
+	return add_poem()
 
 def load_poems():
-	try: 
-		with open(POEMS_FILE, "r") as f:
-			return json.load(f)
-	except:
+	try:
+		with open(POEMS_FILE, "r", encoding="utf-8") as f:
+			data = json.load(f)
+			return data if isinstance(data, list) else []
+		except FileNotFoundError:
+			return []
+	except Exception as e:
+		print("load_poems error:", e)
 		return []
 
 def save_poems(poems):
-	with open(POEMS_FILE, "w") as f:
-		json.dump(poems, f)
+	# atomic write to avoid corrupting the file on crash
+	tmp = POEMS_FILE + ".tmp"
+	with open(tmp, "w", encoding="utf-8") as f:
+		json.dump(poems, f, ensure_ascii=False, indent=2)
+	os.replace(tmp, POEMS_FILE)
 
 def set_override_message(msg):
 	with open(OVERRIDE_FILE, "w") as f:
@@ -210,6 +241,8 @@ def get_override_message():
 			return json.load(f).get("override", "")
 	except:
 		return ""
+
+
 
 @app.route("/current_poem")
 def current_poem():
@@ -227,6 +260,8 @@ def current_poem():
         
         return error_response
 
+
+# ============ MISS YOU ===============
 @app.route("/missyou")
 def missyou():
 	return render_template("missyou.html")
@@ -347,6 +382,8 @@ def remove_poem():
 def calendar():
 	return render_template("calendar.html")
 
+
+# =========== REMINDERS =============
 @app.route("/reminders_page")
 def reminders_page():
 	return render_template("reminders.html")

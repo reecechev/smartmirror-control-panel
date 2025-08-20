@@ -58,10 +58,15 @@
 	<h1 style="text-align: center;">🪞 Poem Manager</h1>
 
 	<div class="section">
-		<h2>✍️ Add a New Poem</h2>
-		<form action="/add_poem" method="POST">
-			<textarea name="poem_text" rows="4" placeholder="Write a new poem..."></textarea>
+		<h2>➕ Add a New Poem</h2>
+		<form id="addForm" method="POST">
+			<textarea name="poem_text" rows="4" placeholder="Write a new poem…" required></textarea>
+			<br>
 			<input type="text" name="author" placeholder="Author (optional)">
+			<label style="margin-left:10px;">
+				<input type="checkbox" name="is_favorite"> Favorite
+			</label>
+			<br>
 			<button type="submit">➕ Add Poem</button>
 		</form>
 	</div>
@@ -115,8 +120,10 @@
 		function wireForms() {
 			const fav = document.getElementById('favForm');
 			const rem = document.getElementById('removeForm');
+			const add = document.getElementById('addForm');
 			if (fav) fav.action = `${BASE}/favorite_poem`;
 			if (rem) rem.action = `${BASE}/remove_poem`;
+			if (add) add.action = `${BASE}/add_poem`;
 		}
 
 		// Load the current poem from the live base

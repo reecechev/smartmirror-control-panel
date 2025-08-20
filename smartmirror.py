@@ -55,17 +55,21 @@ root.configure(bg="black")
 root.attributes('-fullscreen', True)
 root.config(cursor="none")
 
-# --- Hearts: where to draw them (20 distinct spots) ---
-# tweak later, but this will spread them across the lower-right quadrant
-HEART_POSITIONS = [
-	(900, 700), (960, 700), (1020, 700), (1080, 700), (1140, 700),
-	(900, 650), (960, 650), (1020, 650), (1080, 650), (1140, 650),
-	(900, 600), (960, 600), (1020, 600), (1080, 600), (1140, 600),
-	(900, 550), (960, 550), (1020, 550), (1080, 550), (1140, 550),
-]
-heart_labels = [] # we’ll reuse/destroy these each refresh
+# === Hearts config ===
+HEART_FONT = ("URW Gothic L", 28)
+HEART_COLOR = "red"
+HEART_BG = "black"
 
+# keep hearts outside the poem/flower by this many pixels
+P_MARGIN = 20 # poem margin
+F_MARGIN = 8 # flower margin
+
+# remember last state so we can re-place hearts on layout changes without blinking
 prev_heart_count = None
+prev_layout_sig = None
+heart_labels = [] # we keep/reuse these
+
+
 
 # === Fonts ===
 font_time = ("URW Gothic L", 100)
@@ -295,6 +299,110 @@ def check_override_loop():
 
 	root.after(15000, check_override_loop) # Check every 15 seconds
 
+# ============== HEARTS FUNCTIONS ================
+
+def _layout_signature():
+	"""Return (poem x,y,w,h, flower x,y,w,h) so we can detect layout changes."""
+	try:
+		px, py = label_poem.winfo_x(), label_poem.winfo_y()
+		pw, ph = label_poem.winfo_width(), label_poem.winfo_height()
+	except Exception:
+		px = py = pw = ph = 0
+
+	try:
+		fx, fy = flower_canvas.winfo_x(), flower_canvas.winfo_y()
+		fw = flower_canvas.winfo_width() or FLOWER_W
+		fh = flower_canvas.winfo_height() or FLOWER_H
+	except Exception:
+		fx = fy = fw = fh = 0
+
+	return (px, py, pw, ph, fx, fy, fw, fh)
+
+def _rect_perimeter_points(x, y, w, h, n):
+	"""
+	Evenly distribute n points around the rectangle perimeter (clockwise),
+	starting at top-left corner and marching along the edges.
+	"""
+	if n <= 0 or w <= 0 or h <= 0:
+		return []
+
+	# lengths of edges
+	perim = 2 * (w + h)
+	step = perim / n
+
+	pts = []
+	d = 0.0
+	for _ in range(n):
+		t = d % perim
+		if t < w: # top edge: left -> right
+			px, py = x + t, y
+		elif t < w + h: # right edge: top -> bottom
+			px, py = x + w, y + (t - w)
+		elif t < w + h + w: # bottom edge: right -> left
+			px, py = x + (w - (t - (w + h))), y + h
+		else: # left edge: bottom -> top
+			px, py = x, y + (h - (t - (w + h + w)))
+		pts.append((int(px), int(py)))
+		d += step
+	return pts
+
+def _points_around_rect(x, y, w, h, n):
+	"""
+	Return n (x,y) points marching clockwise around the rectangle boundary.
+	Starts near the mid-top, spreads evenly.
+	"""
+	if n <= 0:
+		return []
+	per = 2*(w+h)
+	step = per / n
+	pts = []
+	d = 0.0
+	for _ in range(n):
+		# walk distance d along the perimeter
+		t = d % per
+		if t < w: # top edge (left→right)
+			px, py = x + t, y
+		elif t < w + h: # right edge (top→bottom)
+			px, py = x + w, y + (t - w)
+		elif t < w + h + w: # bottom edge (right→left)
+			px, py = x + (w - (t - (w + h))), y + h
+		else: # left edge (bottom→top)
+			px, py = x, y + (h - (t - (w + h + w)))
+		pts.append((int(px), int(py)))
+		d += step
+	return pts
+
+def _compute_dynamic_heart_positions(total):
+	"""
+	Build heart positions that hug the poem and the flower.
+	Alternates: poem, flower, poem, flower...
+	"""
+	if total <= 0:
+		return []
+
+	# current geometry (and expand by margins so we don't overlap content)
+	px, py, pw, ph, fx, fy, fw, fh = _layout_signature()
+
+	# expand rectangles outward
+	poem_rect = (px - P_MARGIN, py - P_MARGIN, pw + 2*P_MARGIN, ph + 2*P_MARGIN)
+	flower_rect = (fx - F_MARGIN, fy - F_MARGIN, fw + 2*F_MARGIN, fh + 2*F_MARGIN)
+
+	# split the amount roughly in half, but we’ll interleave
+	n_poem = (total + 1) // 2
+	n_flower = total // 2
+
+	poem_pts = _rect_perimeter_points(*poem_rect, n_poem)
+	flower_pts = _rect_perimeter_points(*flower_rect, n_flower)
+
+	# interleave: p0, f0, p1, f1, ...
+	out = []
+	for i in range(max(len(poem_pts), len(flower_pts))):
+		if i < len(poem_pts):
+			out.append(poem_pts[i])
+		if i < len(flower_pts):
+			out.append(flower_pts[i])
+	return out[:total]
+
 def get_active_heart_rings():
 	try:
 		url = f"{ngrokurl}/missyou/status"
@@ -307,45 +415,63 @@ def get_active_heart_rings():
 		return 0
 
 def update_hearts():
-	# draw only when the count changes (prevents blinking)
-	global heart_labels, prev_heart_count
+	"""Re-draw hearts when count OR layout changes. No blinking."""
+	global heart_labels, prev_heart_count, prev_layout_sig
 
+	# how many hearts to show
 	try:
 		count = get_active_heart_rings()
 	except Exception:
 		count = 0
 
-	# if no change, do nothing (no destroy/recreate)
-	if prev_heart_count == count:
-		root.after(1000, update_hearts) # keep polling
+	# has the poem or flower geometry changed?
+	curr_sig = _layout_signature()
+
+	must_refresh = (
+		prev_heart_count is None or
+		count != prev_heart_count or
+		curr_sig != prev_layout_sig
+	)
+
+	if not must_refresh:
+		root.after(1000, update_hearts)
 		return
 
-	# clamp to available positions
-	target = min(int(count), len(HEART_POSITIONS))
-	current = len(heart_labels)
+	# compute desired positions for current layout
+	positions = _compute_dynamic_heart_positions(count)
 
-	# add missing hearts
-	for i in range(current, target):
-		x, y = HEART_POSITIONS[i]
-		lbl = tk.Label(root, text="❤", font=("URW Gothic L", 28), fg="red", bg="black")
-		lbl.place(x=x, y=y)
+	# add missing labels
+	while len(heart_labels) < len(positions):
+		lbl = tk.Label(root, text="❤", font=HEART_FONT, fg=HEART_COLOR, bg=HEART_BG)
 		heart_labels.append(lbl)
 
-	# remove extra hearts (from the end)
-	for _ in range(current - 1, target - 1, -1):
+	# remove extra labels
+	while len(heart_labels) > len(positions):
 		try:
 			heart_labels[-1].destroy()
-		except:
+		except Exception:
 			pass
 		heart_labels.pop()
 
+	# (re)place all labels (no destroy/create -> no blink)
+	for lbl, (x, y) in zip(heart_labels, positions):
+		lbl.place(x=x, y=y)
+
+	# keep poem text and flower image above hearts if needed
+	try:
+		label_poem.lift()
+		flower_canvas.lift()
+	except Exception:
+		pass
+
 	prev_heart_count = count
+	prev_layout_sig = curr_sig
 	root.after(1000, update_hearts)
 
 # === FLOWER (BOTTOM LEFT) =========================================
 # Area where we draw the PNG (you can tweak size/position)
-FLOWER_W, FLOWER_H = 280, 280 # drawing box size
-FLOWER_X, FLOWER_Y = PADDING, -100 # bottom-left offsets (was calendar spot)
+FLOWER_W, FLOWER_H = 380, 380 # drawing box size
+FLOWER_X, FLOWER_Y = 100, -40 
 
 flower_name_var = tk.StringVar(value="")
 flower_canvas = tk.Canvas(root, width=FLOWER_W, height=FLOWER_H, highlightthickness=0, bg=BG)
@@ -353,7 +479,7 @@ flower_label = tk.Label(root, textvariable=flower_name_var, fg=COLOR, bg=BG, fon
 
 # place canvas & label (bottom-left)
 flower_canvas.place(x=FLOWER_X, rely=1.0, y=FLOWER_Y, anchor="sw")
-flower_label.place (x=FLOWER_X, rely=1.0, y=FLOWER_Y + 10, anchor="nw")
+flower_label.place (x=PADDING, rely=1.0, y=FLOWER_Y - 20, anchor="nw")
 
 # Keep references so the image isn't garbage-collected
 _current_flower_photo = None
