@@ -218,8 +218,8 @@ def load_poems():
 		with open(POEMS_FILE, "r", encoding="utf-8") as f:
 			data = json.load(f)
 			return data if isinstance(data, list) else []
-		except FileNotFoundError:
-			return []
+	except FileNotFoundError:
+		return []
 	except Exception as e:
 		print("load_poems error:", e)
 		return []
