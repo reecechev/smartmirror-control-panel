@@ -17,7 +17,48 @@ CITY = "Rochester"
 OVERRIDE_FILE = "/home/pi/smartmirror/poem_override.json"
 current_override_msg = ""
 override_active = False
-ngrokurl = get_ngrok_url()
+
+# --- Resolve the public base safely (retry + short cache) ---
+_BASE_URL = None
+_BASE_TS = 0
+
+def _resolve_base(max_wait=60):
+	"""Try to resolve the live base URL with retries.
+	Returns a string like 'https://xxxx.ngrok-free.app' (no trailing slash)."""
+	import time
+	last_err = None
+	start = time.time()
+	while time.time() - start < max_wait:
+		try:
+			base = get_ngrok_url().rstrip("/")
+			if base.startswith("http"):
+				return base
+		except Exception as e:
+			last_err = e
+		time.sleep(2)
+	# Give back whatever we had before (if any), otherwise raise
+	if _BASE_URL:
+		return _BASE_URL
+	raise RuntimeError(f"Could not resolve ngrok/Render base (last error: {last_err})")
+
+def base_url(stale_after=60):
+	"""Return the current base URL, refreshing if cache is stale."""
+	global _BASE_URL, _BASE_TS
+	import time
+	now = time.time()
+	if not _BASE_URL or (now - _BASE_TS) > stale_after:
+		try:
+			_BASE_URL = _resolve_base(max_wait=30)
+			_BASE_TS = now
+		except Exception:
+			# If we have an old one, keep using it; otherwise bubble up
+			if not _BASE_URL:
+				raise
+	return _BASE_URL
+
+def url(path):
+	"""Join a path like '/reminders' to the current base."""
+	return f"{base_url()}{path}"
 
 def get_weather():
 	url = f"http://api.openweathermap.org/data/2.5/forecast?q={CITY}&units=imperial&appid={API_KEY}"
@@ -129,8 +170,7 @@ label_reminders.place(relx=1.0, y=100, x=-PADDING, anchor="ne")
 def get_reminders():
 	try:
 		base = get_ngrok_url().rstrip("/")
-		url = f"{base}/reminders"
-		r = requests.get(url, timeout=6)
+		r = requests.get(url("/reminders"), timeout=6)
 		r.raise_for_status()
 		return r.json() # should be a list of strings
 	except Exception as e:
@@ -166,8 +206,7 @@ shown_poems = []
 
 def get_override_message():
 	try:
-		override_url = f"{ngrokurl}/override"
-		response = requests.get(override_url)
+		response = requests.get(url("/override"))
 		if response.status_code == 200:
 			data = response.json()
 			return data["override"]
@@ -405,8 +444,7 @@ def _compute_dynamic_heart_positions(total):
 
 def get_active_heart_rings():
 	try:
-		url = f"{ngrokurl}/missyou/status"
-		r = requests.get(url, timeout=5)
+		r = requests.get(url("/missyou/status"), timeout=5)
 		r.raise_for_status()
 		data = r.json()
 		return int(data.get("active_rings", 0))
@@ -488,8 +526,7 @@ _current_flower_url = None
 def _fetch_current_flower():
 	"""GET {name, url} from the Pi via ngrok."""
 	try:
-		base = ngrokurl.rstrip("/")
-		r = requests.get(f"{base}/flower/current", timeout=5)
+		r = requests.get(url("/flower/current"), timeout=5)
 		r.raise_for_status()
 		# expected: {"name": "...", "file": "...", "url": "https://.../static/flowers/xxx.png"}
 		return r.json()
