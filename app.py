@@ -19,6 +19,7 @@ def home():
 REMINDERS_FILE = "reminders.json"
 POEMS_FILE = "poems.json"
 OVERRIDE_FILE = "poem_override.json"
+NGROK_FILE = "ngrok_url.json"
 
 # ---- Flowers config ----
 FLOWER_FOLDER = os.path.join(os.path.dirname(__file__), "static", "flowers")
@@ -323,11 +324,6 @@ def get_ring_timestamps():
 	data = load_missyou_data()
 	return jsonify(data.get("rings", []))
 
-@app.route("/ngrok", methods=["GET"])
-def ngrok_base():
-	# returns public base used by mirror
-	return jsonify({"base": get_ngrok_url()})
-
 @app.route("/poem_override", methods=["POST"])
 def poem_override():
 	msg = request.form.get("override_msg", "")
@@ -432,6 +428,31 @@ def delete_reminder():
 		return jsonify({"status": "deleted", "removed": removed, "reminders": reminders})
 	except IndexError:
 		return jsonify({"error": "Reminder not found"}), 404
+
+# ---- NGROK SYNC (store the live public URL on Render) ----
+@app.route("/ngrok", methods=["GET", "POST"])
+def ngrok_handler():
+	if request.method == "POST":
+		# Body: {"base": "https://<your-id>.ngrok-free.app"}
+		data = request.get_json(force=True, silent=False) or {}
+		base = data.get("base", "").strip()
+		if not base:
+			return jsonify({"status": "error", "message": "missing base"}), 400
+
+		# Save to a small json file in the Render app’s working dir
+		with open(NGROK_FILE, "w", encoding="utf-8") as f:
+			json.dump({"base": base}, f)
+
+		return jsonify({"status": "ok", "base": base})
+
+	# GET -> return the most recently saved URL
+	try:
+		with open(NGROK_FILE, "r", encoding="utf-8") as f:
+			return jsonify(json.load(f))
+	except FileNotFoundError:
+		# Fall back (optional): if you want, you can still call get_ngrok_url()
+		# return jsonify({"base": get_ngrok_url()})
+		return jsonify({"base": None, "status": "no url set"}), 404
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", port=5000)
