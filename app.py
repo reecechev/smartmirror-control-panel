@@ -19,7 +19,7 @@ def home():
 REMINDERS_FILE = "reminders.json"
 POEMS_FILE = "poems.json"
 OVERRIDE_FILE = "poem_override.json"
-NGROK_FILE = "ngrok_url.json"
+NGROK_FILE = os.path.join(os.path.dirname(__file__), "ngrok.json")
 
 # ---- Flowers config ----
 FLOWER_FOLDER = os.path.join(os.path.dirname(__file__), "static", "flowers")
@@ -430,29 +430,34 @@ def delete_reminder():
 		return jsonify({"error": "Reminder not found"}), 404
 
 # ---- NGROK SYNC (store the live public URL on Render) ----
-@app.route("/ngrok", methods=["GET", "POST"])
-def ngrok_handler():
-	if request.method == "POST":
-		# Body: {"base": "https://<your-id>.ngrok-free.app"}
-		data = request.get_json(force=True, silent=False) or {}
-		base = data.get("base", "").strip()
-		if not base:
-			return jsonify({"status": "error", "message": "missing base"}), 400
 
-		# Save to a small json file in the Render app’s working dir
-		with open(NGROK_FILE, "w", encoding="utf-8") as f:
-			json.dump({"base": base}, f)
-
-		return jsonify({"status": "ok", "base": base})
-
-	# GET -> return the most recently saved URL
+def _read_ngrok_file():
 	try:
 		with open(NGROK_FILE, "r", encoding="utf-8") as f:
-			return jsonify(json.load(f))
-	except FileNotFoundError:
-		# Fall back (optional): if you want, you can still call get_ngrok_url()
-		# return jsonify({"base": get_ngrok_url()})
-		return jsonify({"base": None, "status": "no url set"}), 404
+			return json.load(f)
+	except Exception:
+		return {}
+
+@app.route("/ngrok", methods=["GET", "POST"])
+def ngrok_route():
+	if request.method == "POST":
+		data = request.get_json(silent=True) or {}
+		base = (data.get("base") or "").strip().rstrip("/")
+		if not (base.startswith("http://") or base.startswith("https://")):
+			return jsonify({"error": "invalid base"}), 400
+		payload = {"base": base, "updated_at": datetime.utcnow().isoformat() + "Z"}
+		with open(NGROK_FILE, "w", encoding="utf-8") as f:
+			json.dump(payload, f)
+		return jsonify({"status": "ok", **payload})
+
+	# GET
+	payload = _read_ngrok_file()
+	if not payload.get("base"):
+		# (Optional) let env var act as a seed fallback in Render
+		seed = os.environ.get("SMARTMIRROR_BASE", "").strip().rstrip("/")
+		if seed:
+			payload = {"base": seed, "updated_at": None}
+	return jsonify(payload)
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", port=5000)

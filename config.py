@@ -1,35 +1,35 @@
-import os
-import requests
+import os, requests
 
-RENDER_NGROK_URL = "https://smartmirror-control-panel.onrender.com/ngrok"
-GIST_FALLBACK_URL = "https://gist.githubusercontent.com/reecechev/27cac807fe63cc098a10e454427063907/raw/smartmirror-link.txt"
+RENDER_NGROK_ENDPOINT = "https://smartmirror-control-panel.onrender.com/ngrok"
+GIST_RAW_URL = "https://gist.githubusercontent.com/reececheev/27acb0f7638cca981a10e454427063907/raw/smartmirror-link.txt"
 
-def _strip(u: str) -> str:
-	return u.strip().rstrip("/")
+def _clean(u: str) -> str:
+	return (u or "").strip().rstrip("/")
 
-def get_ngrok_url() -> str:
-	# 1) Try Render (/ngrok returns {"base": "https://....ngrok-free.app"})
+def get_ngrok_url():
+	# 1) Render (authoritative)
 	try:
-		r = requests.get(RENDER_NGROK_URL, timeout=4)
+		r = requests.get(RENDER_NGROK_ENDPOINT, timeout=5)
 		if r.ok:
-			base = (r.json() or {}).get("base")
+			base = _clean(r.json().get("base", ""))
 			if base:
-				return _strip(base)
+				return base
 	except Exception:
 		pass
 
-	# 2) Optional env override (handy for testing)
-	env = os.getenv("SMARTMIRROR_BASE")
-	if env:
-		return _strip(env)
+	# 2) Environment fallback (works on Pi or Render)
+	env_base = _clean(os.environ.get("SMARTMIRROR_BASE", ""))
+	if env_base:
+		return env_base
 
-	# 3) Fallback to the Gist (legacy)
+	# 3) Gist fallback
 	try:
-		r = requests.get(GIST_FALLBACK_URL, timeout=4)
-		if r.ok and r.text.strip():
-			return _strip(r.text)
+		r = requests.get(GIST_RAW_URL, timeout=5)
+		if r.ok:
+			base = _clean(r.text)
+			if base:
+				return base
 	except Exception:
 		pass
 
-	# 4) If everything failed, raise a clear error
 	raise RuntimeError("Could not resolve ngrok base URL (Render /ngrok, env, or Gist).")
