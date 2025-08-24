@@ -1,10 +1,16 @@
 venv/
-webapp/venv/
 __pycache__/
 *.pyc
-*.pyo
 *.log
-*.sqlite3
-instance/
-.env
-update_ngrok.sh
+
+# local runtime state (never commit)
+current_poem.json
+flowers_state.json
+hearts.json
+missyou.json
+ngrok.json
+poem_override.json
+reminders.json
+
+# optional: keep local images out of repo
+static/flowers/*
