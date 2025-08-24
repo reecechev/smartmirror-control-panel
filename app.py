@@ -31,7 +31,7 @@ def home():
 	if base.startswith("http"):
 		base_host = urlparse(base).netloc
 		cur_host = request.headers.get("Host", "")
-		if base_host and cur_host ad cur_host != base_host:
+		if base_host and cur_host and cur_host != base_host:
 			return redirect(base, code=302)
 
 	# fallback waiting page
