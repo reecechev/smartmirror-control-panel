@@ -41,7 +41,7 @@ def home():
 		"CDN-Cache-Control": "no-store",
 		"Pragma": "no-cache",
 		"Expires": "0",
-	})
+	}
 	return Response(html, status=503, headers=headers)
 
 # ---- Flowers config ----
