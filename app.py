@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-from flask import Flask, render_template, request, redirect, make_response
+from flask import Flask, render_template, request, redirect, make_response, Response
 import os, json
 from flask_cors import CORS
 from datetime import datetime, timedelta
@@ -29,26 +29,20 @@ def home():
 		base = ""
 
 	if base.startswith("http"):
-		from flask import make_response
-		resp = redirect(base + "/", code=302)
-		resp.headers.update({
-			"Cache-Control": "no-store, max-age=0",
-			"CDN-Cache-Control": "no-store",
-			"Pragma": "no-cache",
-			"Expires": "0",
-		})
-		return resp
+		base_host = urlparse(base).netloc
+		cur_host = request.headers.get("Host", "")
+		if base_host and cur_host ad cur_host != base_host:
+			return redirect(base, code=302)
 
 	# fallback waiting page
 	html = '<h3>Waiting for ngrok…</h3><p>POST a JSON {"base":"https://…"} to /ngrok</p>'
-	resp = make_response(html, 503)
-	resp.headers.update({
+	headers = {
 		"Cache-Control": "no-store, max-age=0",
 		"CDN-Cache-Control": "no-store",
 		"Pragma": "no-cache",
 		"Expires": "0",
 	})
-	return resp
+	return Response(html, status=503, headers=headers)
 
 # ---- Flowers config ----
 FLOWER_FOLDER = os.path.join(os.path.dirname(__file__), "static", "flowers")
