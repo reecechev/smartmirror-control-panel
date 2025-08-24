@@ -12,14 +12,28 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 CORS(app)
 
-@app.route("/")
-def home():
-	return render_template("index.html")
 
 REMINDERS_FILE = "reminders.json"
 POEMS_FILE = "poems.json"
 OVERRIDE_FILE = "poem_override.json"
 NGROK_FILE = os.path.join(os.path.dirname(__file__), "ngrok.json")
+
+
+@app.route("/")
+def home():
+	# read fresh value every request
+	try:
+		with open(NGROK_FILE, "r", encoding="utf-8") as f:
+			base = (json.load(f) or {}).get("base", "").strip().rstrip("/")
+	except Exception:
+		base = ""
+
+	if base.startswith("http"):
+		return redirect(base, code=302)
+
+	# if not set yet, show a tiny status page
+	return "<h3>Waiting for ngrok…</h3><p>POST a JSON {\"base\":\"https://…\"} to /ngrok</p>", 503
+
 
 # ---- Flowers config ----
 FLOWER_FOLDER = os.path.join(os.path.dirname(__file__), "static", "flowers")
@@ -448,19 +462,26 @@ def ngrok_route():
 		base = (data.get("base") or "").strip().rstrip("/")
 		if not (base.startswith("http://") or base.startswith("https://")):
 			return jsonify({"error": "invalid base"}), 400
-		payload = {"base": base, "updated_at": datetime.utcnow().isoformat() + "Z"}
 		with open(NGROK_FILE, "w", encoding="utf-8") as f:
-			json.dump(payload, f)
-		return jsonify({"status": "ok", **payload})
+			json.dump({"base": base, "updated_at": datetime.utcnow().isoformat() + "Z"}, f)
+		return jsonify({"status": "ok"})
 
 	# GET
-	payload = _read_ngrok_file()
-	if not payload.get("base"):
-		# (Optional) let env var act as a seed fallback in Render
-		seed = os.environ.get("SMARTMIRROR_BASE", "").strip().rstrip("/")
-		if seed:
-			payload = {"base": seed, "updated_at": None}
-	return jsonify(payload)
+	try:
+		with open(NGROK_FILE, "r", encoding="utf-8") as f:
+			payload = json.load(f)
+	except Exception:
+		payload = {}
+
+	# prevent stale CDN/browser caches
+	headers = {
+		"Cache-Control": "no-store, max-age=0",
+		"CDN-Cache-Control": "no-store",
+		"Pragma": "no-cache",
+		"Expires": "0",
+	}
+	return make_response(jsonify(payload), 200, headers)
+
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", port=5000)
