@@ -22,22 +22,33 @@ NGROK_FILE = os.path.join(os.path.dirname(__file__), "ngrok.json")
 
 @app.route("/")
 def home():
-	# read fresh value every request
 	try:
 		with open(NGROK_FILE, "r", encoding="utf-8") as f:
-			base = (json.load(f) or {}).get("base", "").strip().rstrip("/")
+			base = (json.load(f).get("base", "") or "").strip().rstrip("/")
 	except Exception:
 		base = ""
 
 	if base.startswith("http"):
-		base_host = urlparse(base).netloc
-		cur_host = request.headers.get("Host", "")
-		if base_host and cur_host and (cur_host != base_host):
-			return redirect(base, code=302)
+		from flask import make_response
+		resp = redirect(base + "/", code=302)
+		resp.headers.update({
+			"Cache-Control": "no-store, max-age=0",
+			"CDN-Cache-Control": "no-store",
+			"Pragma": "no-cache",
+			"Expires": "0",
+		})
+		return resp
 
-	# if not set yet, show a tiny status page
-	return "<h3>Waiting for ngrok…</h3><p>POST a JSON {\"base\":\"https://…\"} to /ngrok</p>", 503
-
+	# fallback waiting page
+	html = '<h3>Waiting for ngrok…</h3><p>POST a JSON {"base":"https://…"} to /ngrok</p>'
+	resp = make_response(html, 503)
+	resp.headers.update({
+		"Cache-Control": "no-store, max-age=0",
+		"CDN-Cache-Control": "no-store",
+		"Pragma": "no-cache",
+		"Expires": "0",
+	})
+	return resp
 
 # ---- Flowers config ----
 FLOWER_FOLDER = os.path.join(os.path.dirname(__file__), "static", "flowers")
