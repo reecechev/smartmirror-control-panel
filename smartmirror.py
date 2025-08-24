@@ -22,24 +22,19 @@ override_active = False
 _BASE_URL = None
 _BASE_TS = 0
 
-def _resolve_base(max_wait=60):
-	"""Try to resolve the live base URL with retries.
-	Returns a string like 'https://xxxx.ngrok-free.app' (no trailing slash)."""
-	import time
-	last_err = None
-	start = time.time()
-	while time.time() - start < max_wait:
+def _resolve_base(retries=12, delay=5):
+	for _ in range(retries):
 		try:
-			base = get_ngrok_url().rstrip("/")
+			base = get_ngrok_url()
 			if base.startswith("http"):
-				return base
-		except Exception as e:
-			last_err = e
-		time.sleep(2)
-	# Give back whatever we had before (if any), otherwise raise
-	if _BASE_URL:
-		return _BASE_URL
-	raise RuntimeError(f"Could not resolve ngrok/Render base (last error: {last_err})")
+				return base.rstrip("/")
+		except Exception:
+			pass
+		time.sleep(delay)
+	return "http://127.0.0.1:5000"
+
+BASE = _resolve_base()
+print("using base:", BASE)
 
 def base_url(stale_after=60):
 	"""Return the current base URL, refreshing if cache is stale."""
@@ -57,8 +52,7 @@ def base_url(stale_after=60):
 	return _BASE_URL
 
 def url(path):
-	"""Join a path like '/reminders' to the current base."""
-	return f"{base_url()}{path}"
+	return f"{BASE}{path}"
 
 def get_weather():
 	url = f"http://api.openweathermap.org/data/2.5/forecast?q={CITY}&units=imperial&appid={API_KEY}"
