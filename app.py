@@ -22,19 +22,26 @@ NGROK_FILE = os.path.join(os.path.dirname(__file__), "ngrok.json")
 
 @app.route("/")
 def home():
+	# read base from file (robust against empty/corrupt file)
 	try:
 		with open(NGROK_FILE, "r", encoding="utf-8") as f:
-			base = (json.load(f).get("base", "") or "").strip().rstrip("/")
+			data = json.load(f) or {}
+			base = (data.get("base", "") or "").strip().rstrip("/")
 	except Exception:
 		base = ""
 
-	if base.startswith("http"):
+	if base:
 		base_host = urlparse(base).netloc
 		cur_host = request.headers.get("Host", "")
-		if base_host and cur_host and cur_host != base_host:
+
+		# if we're not on the ngrok host yet, bounce there
+		if base_host and cur_host and (cur_host != base_host):
 			return redirect(base, code=302)
 
-	# fallback waiting page
+		# already on ngrok (or we can't determine hosts) -> show the real UI
+		return render_template("index.html") # or whatever your main page is
+
+	# no base set yet -> tiny "waiting" page, with no-cache headers
 	html = '<h3>Waiting for ngrok…</h3><p>POST a JSON {"base":"https://…"} to /ngrok</p>'
 	headers = {
 		"Cache-Control": "no-store, max-age=0",
