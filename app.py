@@ -61,15 +61,18 @@ def _next_wed_9am(after_dt):
 	return due
 
 def _maybe_rotate_weekly(state, now_et):
+	"""If it’s past the next Wed 9am since last change, bump index and persist."""
 	try:
 		changed_at = datetime.fromisoformat(state.get("changed_at")).astimezone(TZ_NY)
 	except Exception:
 		changed_at = now_et
+
 	due = _next_wed_9am(changed_at)
 	if now_et >= due:
-		state["index"] = (int(state.get("index", 0)) + 1) % len(FLOWERS)
+		state["index"] = int(state.get("index", 0)) + 1 # no modulo here
 		state["changed_at"] = now_et.isoformat()
 		_save_flower_state(state)
+
 	return state
 
 def load_reminders():
