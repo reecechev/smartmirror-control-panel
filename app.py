@@ -29,7 +29,10 @@ def home():
 		base = ""
 
 	if base.startswith("http"):
-		return redirect(base, code=302)
+		base_host = urlparse(base).netloc
+		cur_host = request.headers.get("Host", "")
+		if base_host and cur_host and (cur_host != base_host):
+			return redirect(base, code=302)
 
 	# if not set yet, show a tiny status page
 	return "<h3>Waiting for ngrok…</h3><p>POST a JSON {\"base\":\"https://…\"} to /ngrok</p>", 503
