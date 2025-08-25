@@ -240,19 +240,19 @@ def rotate_poem():
 		with open("poems.json", "r", encoding="utf-8") as f:
 			data = json.load(f)
 
-	# Support both formats:
-	# - new/your current format: list of {text, author, display}
-	# - old format: {"display": [...], "favorites": [...], ...}
-	if isinstance(data, list):
-		pool = [p for p in data if p.get("display", True)]
-	else:
-		pool = data.get("display", [])
+		# Support both formats:
+		# - new/your current format: list of {text, author, display}
+		# - old format: {"display": [...], "favorites": [...], ...}
+		if isinstance(data, list):
+			pool = [p for p in data if p.get("display", True)]
+		else:
+			pool = data.get("display", [])
 
-	all_poems = [
-		f'{p.get("text", "").strip()}\n- {p.get("author", "Unknown").strip()}'
-		for p in pool
-		if p.get("text")
-	]
+		all_poems = [
+			f'{p.get("text", "").strip()}\n- {p.get("author", "Unknown").strip()}'
+			for p in pool
+			if p.get("text")
+		]
 	except Exception as e:
 		print("poem load error:", e)
 		all_poems = []
