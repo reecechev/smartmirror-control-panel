@@ -299,13 +299,13 @@ def favorite_poem():
 		with open("current_poem.json", "r", encoding="utf-8") as f:
 			current_poem = json.load(f)
 
-	# stash in favorites.json (list)
-	_append_json(FAVORITES_FILE, current_poem)
+		# stash in favorites.json (list)
+		_append_json(FAVORITES_FILE, current_poem)
 
-	# back to the poems page (or return JSON if you prefer)
-	return redirect("/poems")
-		except Exception as e:
-	return f"Error favoriting poem: {e}", 500
+		# back to the poems page (or return JSON if you prefer)
+		return redirect("/poems")
+	except Exception as e:
+		return f"Error favoriting poem: {e}", 500
 
 
 @app.route("/remove_poem", methods=["POST"])
