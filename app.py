@@ -18,6 +18,8 @@ REMINDERS_FILE = "reminders.json"
 POEMS_FILE = "poems.json"
 OVERRIDE_FILE = "poem_override.json"
 NGROK_FILE = os.path.join(os.path.dirname(__file__), "ngrok.json")
+FAVORITES_FILE = "favorites.json"
+REMOVED_FILE = "removed.json"
 
 
 @app.route("/")
@@ -50,6 +52,20 @@ def home():
 		"Expires": "0",
 	}
 	return Response(html, status=503, headers=headers)
+
+def _append_json(path, obj):
+	try:
+		with open(path, "r", encoding="utf-8") as f:
+			arr = json.load(f)
+			if not isinstance(arr, list):
+				arr = []
+	except FileNotFoundError:
+		arr = []
+	except Exception:
+		arr = []
+	arr.append(obj)
+	with open(path, "w", encoding="utf-8") as f:
+		json.dump(arr, f, ensure_ascii=False, indent=2)
 
 # ---- Flowers config ----
 FLOWER_FOLDER = os.path.join(os.path.dirname(__file__), "static", "flowers")
@@ -276,6 +292,56 @@ def get_override_message():
 	except:
 		return ""
 
+@app.route("/favorite_poem", methods=["POST"])
+def favorite_poem():
+	try:
+		# read the poem currently on screen
+		with open("current_poem.json", "r", encoding="utf-8") as f:
+			current_poem = json.load(f)
+
+	# stash in favorites.json (list)
+	_append_json(FAVORITES_FILE, current_poem)
+
+	# back to the poems page (or return JSON if you prefer)
+	return redirect("/poems")
+		except Exception as e:
+	return f"Error favoriting poem: {e}", 500
+
+
+@app.route("/remove_poem", methods=["POST"])
+def remove_poem():
+	try:
+		# poem currently showing
+		with open("current_poem.json", "r", encoding="utf-8") as f:
+			current_poem = json.load(f)
+
+		# load poems list
+		with open("poems.json", "r", encoding="utf-8") as f:
+			poems = json.load(f)
+			if not isinstance(poems, list):
+				poems = []
+
+		# locate a matching poem and set display=False
+		ct = current_poem.get("text", "").strip()
+		ca = current_poem.get("author", "").strip()
+
+		changed = False
+		for p in poems:
+			if p.get("text", "").strip() == ct and p.get("author", "").strip() == ca:
+				p["display"] = False
+				changed = True
+				break
+
+		if changed:
+			with open("poems.json", "w", encoding="utf-8") as f:
+				json.dump(poems, f, ensure_ascii=False, indent=2)
+
+		# also log it in removed.json (optional, useful history)
+		_append_json(REMOVED_FILE, current_poem)
+
+		return redirect("/poems")
+	except Exception as e:
+		return f"Error removing poem: {e}", 500
 
 
 @app.route("/current_poem")
@@ -362,50 +428,6 @@ def poem_override():
 	msg = request.form.get("override_msg", "")
 	set_override_message(msg)
 	return redirect("/poems")
-
-@app.route("/favorite_poem", methods=["POST"])
-def favorite_poem():
-	try:
-		with open("current_poem.json", "r", encoding="utf-8") as f:
-			current_poem = json.load(f)
-
-		with open("poems.json", "r", encoding="utf-8") as f:
-			poem_data = json.load(f)
-
-		# Move to favorites if not already there
-		if current_poem not in poem_data.get("favorites", []):
-			poem_data["favorites"].append(current_poem)
-
-		with open("poems.json", "w", encoding="utf-8") as f:
-			json.dump(poem_data, f, indent=4)
-
-		return redirect("https://smartmirror-app.onrender.com/poems")
-	except Exception as e:
-		return f"Error favoriting poem: {e}", 500
-
-@app.route("/remove_poem", methods=["POST"])
-def remove_poem():
-	try:
-		with open("current_poem.json", "r", encoding="utf-8") as f:
-			current_poem = json.load(f)
-
-		with open("poems.json", "r", encoding="utf-8") as f:
-			poem_data = json.load(f)
-
-		# Move to removed if not already there
-		if current_poem not in poem_data.get("removed", []):
-			poem_data["removed"].append(current_poem)
-
-		# Remove from display pool
-		if current_poem in poem_data.get("display", []):
-			poem_data["display"].remove(current_poem)
-
-		with open("poems.json", "w", encoding="utf-8") as f:
-			json.dump(poem_data, f, indent=4)
-
-		return redirect("https://smartmirror-app.onrender.com/poems")
-	except Exception as e:
-		return f"Error removing poem: {e}", 500
 
 @app.route("/calendar")
 def calendar():

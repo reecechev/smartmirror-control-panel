@@ -90,6 +90,26 @@ root.configure(bg="black")
 root.attributes('-fullscreen', True)
 root.config(cursor="none")
 
+# --- safety bindings (add right after you create Tk) ---
+# Toggle fullscreen with F11
+def toggle_fullscreen(event=None):
+	is_fs = bool(root.attributes("-fullscreen"))
+	root.attributes("-fullscreen", not is_fs)
+
+# Leave fullscreen (but keep the app open) with Ctrl+F11
+def leave_fullscreen(event=None):
+	root.attributes("-fullscreen", False)
+
+# Quit the app cleanly with Esc or Ctrl+Q
+def quit_app(event=None):
+	root.destroy()
+
+root.bind("<F11>", toggle_fullscreen)
+root.bind("<Control-F11>", leave_fullscreen)
+root.bind("<Escape>", quit_app)
+root.bind("<Control-q>", quit_app)
+# -------------------------------------------------------
+
 # === Hearts config ===
 HEART_FONT = ("URW Gothic L", 28)
 HEART_COLOR = "red"
@@ -218,9 +238,23 @@ def rotate_poem():
 
 	try:
 		with open("poems.json", "r", encoding="utf-8") as f:
-			poem_data = json.load(f)
-			all_poems = [f'{p.get("text", "").strip()}\n- {p.get("author", "Unknown").strip()}' for p in poem_data.get("display", []) if p.get("text")]
-	except:
+			data = json.load(f)
+
+	# Support both formats:
+	# - new/your current format: list of {text, author, display}
+	# - old format: {"display": [...], "favorites": [...], ...}
+	if isinstance(data, list):
+		pool = [p for p in data if p.get("display", True)]
+	else:
+		pool = data.get("display", [])
+
+	all_poems = [
+		f'{p.get("text", "").strip()}\n- {p.get("author", "Unknown").strip()}'
+		for p in pool
+		if p.get("text")
+	]
+	except Exception as e:
+		print("poem load error:", e)
 		all_poems = []
 
 	# === GET ACTIVE REMINDERS ===
