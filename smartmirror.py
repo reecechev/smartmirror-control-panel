@@ -18,41 +18,44 @@ OVERRIDE_FILE = "/home/pi/smartmirror/poem_override.json"
 current_override_msg = ""
 override_active = False
 
-# --- Resolve the public base safely (retry + short cache) ---
+NGROK_JSON = "/home/pi/smartmirror/ngrok.json"
 _BASE_URL = None
 _BASE_TS = 0
 
-def _resolve_base(retries=12, delay=5):
-	for _ in range(retries):
-		try:
-			base = get_ngrok_url()
+def _read_base_from_disk():
+	"""Return 'https://xxxx.ngrok-free.app' (no trailing slash) from ngrok.json, or ''."""
+	try:
+		with open(NGROK_JSON, "r", encoding="utf-8") as f:
+			data = json.load(f) or {}
+			base = (data.get("base", "") or "").strip().rstrip("/")
 			if base.startswith("http"):
-				return base.rstrip("/")
-		except Exception:
-			pass
-		time.sleep(delay)
-	return "http://127.0.0.1:5000"
+				return base
+	except Exception:
+		pass
+	return ""
 
-BASE = _resolve_base()
-print("using base:", BASE)
-
-def base_url(stale_after=60):
-	"""Return the current base URL, refreshing if cache is stale."""
+def base_url(stale_after=300):
+	"""
+	Return current base URL, refreshing from ngrok.json if cache is stale.
+	Fallback to localhost if nothing on disk.
+	"""
 	global _BASE_URL, _BASE_TS
-	import time
 	now = time.time()
 	if not _BASE_URL or (now - _BASE_TS) > stale_after:
-		try:
-			_BASE_URL = _resolve_base(max_wait=30)
-			_BASE_TS = now
-		except Exception:
-			# If we have an old one, keep using it; otherwise bubble up
-			if not _BASE_URL:
-				raise
+		new_base = _read_base_from_disk()
+		if new_base: # got a good URL
+			_BASE_URL = new_base
+		elif not _BASE_URL: # no cached good URL yet
+			_BASE_URL = "http://127.0.0.1:5000"
+		_BASE_TS = now
 	return _BASE_URL
 
 def url(path):
-	return f"{BASE}{path}"
+	"""Join the cached base with a path like '/reminders'."""
+	base = base_url()
+	if not path.startswith("/"):
+		path = "/" + path
+	return base + path
 
 def get_weather():
 	url = f"http://api.openweathermap.org/data/2.5/forecast?q={CITY}&units=imperial&appid={API_KEY}"
@@ -183,7 +186,6 @@ label_reminders.place(relx=1.0, y=100, x=-PADDING, anchor="ne")
 
 def get_reminders():
 	try:
-		base = get_ngrok_url().rstrip("/")
 		r = requests.get(url("/reminders"), timeout=6)
 		r.raise_for_status()
 		return r.json() # should be a list of strings
@@ -364,7 +366,7 @@ def check_override_loop():
 		current_override_msg = ""
 		rotate_poem()
 
-	root.after(15000, check_override_loop) # Check every 15 seconds
+	root.after(30000, check_override_loop) # Check every 15 seconds
 
 # ============== HEARTS FUNCTIONS ================
 
@@ -500,7 +502,7 @@ def update_hearts():
 	)
 
 	if not must_refresh:
-		root.after(1000, update_hearts)
+		root.after(5000, update_hearts)
 		return
 
 	# compute desired positions for current layout
@@ -532,7 +534,7 @@ def update_hearts():
 
 	prev_heart_count = count
 	prev_layout_sig = curr_sig
-	root.after(1000, update_hearts)
+	root.after(2000, update_hearts)
 
 # === FLOWER (BOTTOM LEFT) =========================================
 # Area where we draw the PNG (you can tweak size/position)
