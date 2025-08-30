@@ -33,8 +33,8 @@ def home():
 			with open(NGROK_FILE, "r", encoding="utf-8") as f:
 				data = json.load(f) or {}
 				base = (data.get("base", "") or "").strip().rstrip("/")
-	except Exception:
-		base = ""
+		except Exception:
+			base = ""
 
 	if base:
 	# If we hit Render (or any non-ngrok host), redirect to the static base
