@@ -383,12 +383,12 @@ def load_missyou_data():
 	"""Always return a dict with keys: clicks (int), rings (list of ISO UTC strings)."""
 	try:
 		with open(MISSYOU_FILE, "r", encoding="utf-8") as f:
-		data = json.load(f)
-		if not isinstance(data, dict):
-			raise ValueError("bad shape")
-		data.setdefault("clicks", 0)
-		data.setdefault("rings", [])
-		return data
+			data = json.load(f)
+			if not isinstance(data, dict):
+				raise ValueError("bad shape")
+			data.setdefault("clicks", 0)
+			data.setdefault("rings", [])
+			return data
 	except Exception:
 		# File missing or corrupt -> start fresh
 		return {"clicks": 0, "rings": []}
