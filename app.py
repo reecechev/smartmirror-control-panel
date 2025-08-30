@@ -20,31 +20,39 @@ OVERRIDE_FILE = "poem_override.json"
 NGROK_FILE = os.path.join(os.path.dirname(__file__), "ngrok.json")
 FAVORITES_FILE = "favorites.json"
 REMOVED_FILE = "removed.json"
-
+STATIC_BASE = "https://ostrich-pretty-lab.ngrok.app".rstrip("/")
 
 @app.route("/")
 def home():
-	# read base from file (robust against empty/corrupt file)
-	try:
-		with open(NGROK_FILE, "r", encoding="utf-8") as f:
-			data = json.load(f) or {}
-			base = (data.get("base", "") or "").strip().rstrip("/")
+	# Prefer static base if defined
+	base = STATIC_BASE
+
+	# Fallback to ngrok.json only if no static base configured
+	if not base:
+		try:
+			with open(NGROK_FILE, "r", encoding="utf-8") as f:
+				data = json.load(f) or {}
+				base = (data.get("base", "") or "").strip().rstrip("/")
 	except Exception:
 		base = ""
 
 	if base:
-		base_host = urlparse(base).netloc
-		cur_host = request.headers.get("Host", "")
+	# If we hit Render (or any non-ngrok host), redirect to the static base
+		try:
+			from urllib.parse import urlparse
+			base_host = urlparse(base).netloc
+			cur_host = request.headers.get("Host", "")
+			if cur_host and cur_host != base_host:
+				return redirect(base, code=302)
+		except Exception:
+			# If anything looks odd, just render the UI instead of bouncing
+			pass
 
-		# if we're not on the ngrok host yet, bounce there
-		if base_host and cur_host and (cur_host != base_host):
-			return redirect(base, code=302)
+		# We're already on the right host -> render the app normally
+		return render_template("index.html") # or your real main page
 
-		# already on ngrok (or we can't determine hosts) -> show the real UI
-		return render_template("index.html") # or whatever your main page is
-
-	# no base set yet -> tiny "waiting" page, with no-cache headers
-	html = '<h3>Waiting for ngrok…</h3><p>POST a JSON {"base":"https://…"} to /ngrok</p>'
+	# No base at all -> show tiny "waiting" page (very rare)
+	html = "<h3>Waiting for ngrok...</h3><p>POST a JSON {\"base\":\"https://...\"} to /ngrok</p>"
 	headers = {
 		"Cache-Control": "no-store, max-age=0",
 		"CDN-Cache-Control": "no-store",
@@ -495,23 +503,29 @@ def _read_ngrok_file():
 
 @app.route("/ngrok", methods=["GET", "POST"])
 def ngrok_route():
+	# If you have a static domain, don't allow changes to it by POST
 	if request.method == "POST":
+		if STATIC_BASE:
+			return jsonify({"status": "ignored", "reason": "static base configured"}), 200
+
 		data = request.get_json(silent=True) or {}
 		base = (data.get("base") or "").strip().rstrip("/")
 		if not (base.startswith("http://") or base.startswith("https://")):
 			return jsonify({"error": "invalid base"}), 400
+
 		with open(NGROK_FILE, "w", encoding="utf-8") as f:
 			json.dump({"base": base, "updated_at": datetime.utcnow().isoformat() + "Z"}, f)
 		return jsonify({"status": "ok"})
 
-	# GET
-	try:
-		with open(NGROK_FILE, "r", encoding="utf-8") as f:
-			payload = json.load(f)
-	except Exception:
-		payload = {}
+	# GET: report current base (prefer static)
+	payload = {"base": STATIC_BASE} if STATIC_BASE else {}
+	if not payload.get("base"):
+		try:
+			with open(NGROK_FILE, "r", encoding="utf-8") as f:
+				payload = json.load(f)
+		except Exception:
+			payload = {}
 
-	# prevent stale CDN/browser caches
 	headers = {
 		"Cache-Control": "no-store, max-age=0",
 		"CDN-Cache-Control": "no-store",

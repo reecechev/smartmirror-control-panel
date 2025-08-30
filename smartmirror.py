@@ -19,40 +19,12 @@ current_override_msg = ""
 override_active = False
 
 NGROK_JSON = "/home/pi/smartmirror/ngrok.json"
-_BASE_URL = None
-_BASE_TS = 0
 
-def _read_base_from_disk():
-	"""Return 'https://xxxx.ngrok-free.app' (no trailing slash) from ngrok.json, or ''."""
-	try:
-		with open(NGROK_JSON, "r", encoding="utf-8") as f:
-			data = json.load(f) or {}
-			base = (data.get("base", "") or "").strip().rstrip("/")
-			if base.startswith("http"):
-				return base
-	except Exception:
-		pass
-	return ""
+STATIC_BASE = "https://ostrich-pretty-lab.ngrok.app"
 
-def base_url(stale_after=300):
-	"""
-	Return current base URL, refreshing from ngrok.json if cache is stale.
-	Fallback to localhost if nothing on disk.
-	"""
-	global _BASE_URL, _BASE_TS
-	now = time.time()
-	if not _BASE_URL or (now - _BASE_TS) > stale_after:
-		new_base = _read_base_from_disk()
-		if new_base: # got a good URL
-			_BASE_URL = new_base
-		elif not _BASE_URL: # no cached good URL yet
-			_BASE_URL = "http://127.0.0.1:5000"
-		_BASE_TS = now
-	return _BASE_URL
-
-def url(path):
-	"""Join the cached base with a path like '/reminders'."""
-	base = base_url()
+def url(path: str) -> str:
+	"""Join STATIC_BASE with a path like '/reminders'."""
+	base = STATIC_BASE.rstrip("/")
 	if not path.startswith("/"):
 		path = "/" + path
 	return base + path
@@ -261,7 +233,7 @@ def rotate_poem():
 
 	# === GET ACTIVE REMINDERS ===
 	try:
-		with open("/home/pi/smartmirror/webapp/reminders.json", "r") as f:
+		with open("/home/pi/smartmirror/reminders.json", "r") as f:
 			reminder_data = json.load(f)
 			num_reminders = len(reminder_data)
 	except:
@@ -472,15 +444,30 @@ def _compute_dynamic_heart_positions(total):
 			out.append(flower_pts[i])
 	return out[:total]
 
+# cache + throttle for hearts
+_last_rings_value = 0
+_last_rings_ts = 0.0
+_HEARTS_MIN_INTERVAL = 3.0 # seconds between server checks
+
 def get_active_heart_rings():
+	"""Return number of active rings; only hit server every few seconds."""
+	global _last_rings_value, _last_rings_ts
+
+	now = time.time()
+	if (now - _last_rings_ts) < _HEARTS_MIN_INTERVAL:
+		return _last_rings_value # use cached value
+
 	try:
 		r = requests.get(url("/missyou/status"), timeout=5)
 		r.raise_for_status()
 		data = r.json()
-		return int(data.get("active_rings", 0))
+		_last_rings_value = int(data.get("active_rings", 0))
 	except Exception as e:
 		print("Error fetching heart data:", e)
-		return 0
+	# keep whatever we had so we don't flicker to 0 on transient errors
+
+	_last_rings_ts = now
+	return _last_rings_value
 
 def update_hearts():
 	"""Re-draw hearts when count OR layout changes. No blinking."""
