@@ -21,6 +21,7 @@ NGROK_FILE = os.path.join(os.path.dirname(__file__), "ngrok.json")
 FAVORITES_FILE = "favorites.json"
 REMOVED_FILE = "removed.json"
 STATIC_BASE = "https://ostrich-pretty-lab.ngrok.app".rstrip("/")
+MISSYOU_FILE = "missyou.json"
 
 @app.route("/")
 def home():
@@ -374,57 +375,69 @@ def current_poem():
 def missyou():
 	return render_template("missyou.html")
 
+def _ensure_parent_dir(path):
+	# (keeps things safe even if you later move the file)
+	Path(path).parent.mkdir(parents=True, exist_ok=True)
+
 def load_missyou_data():
-	with open('missyou.json', 'r') as f:
-		return json.load(f)
+	"""Always return a dict with keys: clicks (int), rings (list of ISO UTC strings)."""
+	try:
+		with open(MISSYOU_FILE, "r", encoding="utf-8") as f:
+		data = json.load(f)
+		if not isinstance(data, dict):
+			raise ValueError("bad shape")
+		data.setdefault("clicks", 0)
+		data.setdefault("rings", [])
+		return data
+	except Exception:
+		# File missing or corrupt -> start fresh
+		return {"clicks": 0, "rings": []}
 
 def save_missyou_data(data):
-	with open('missyou.json', 'w') as f:
-		json.dump(data, f)
+	"""Persist safely."""
+	_ensure_parent_dir(MISSYOU_FILE)
+	with open(MISSYOU_FILE, "w", encoding="utf-8") as f:
+		json.dump(data, f, ensure_ascii=False, indent=2)
 
 @app.route("/missyou/tap", methods=["POST"])
 def tap_heart():
 	data = load_missyou_data()
 
-	if "clicks" not in data:
-		data["clicks"] = 0
-	if "rings" not in data:
-		data["rings"] = []
+	# Bump clicks
+	data["clicks"] = int(data.get("clicks", 0)) + 1
 
-	# Increment clicks first
-	data["clicks"] += 1
-
-	# Every 10 clicks, add a ring
+	# Every 10 clicks -> add a ring timestamp (UTC, no microseconds)
 	if data["clicks"] % 10 == 0:
-		now = datetime.utcnow().isoformat()
+		now = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 		data["rings"].append(now)
-		print(f"[💖] Ring added at {now}")
+		# keep list bounded so file never grows unbounded
+		if len(data["rings"]) > 200:
+			data["rings"] = data["rings"][-200:]
 
 	save_missyou_data(data)
-
-	return jsonify({
-		"clicks": data["clicks"],
-		"rings": len(data["rings"])
-	})
+	return jsonify({"clicks": data["clicks"], "rings": len(data["rings"])})
 
 @app.route("/missyou/status")
 def missyou_status():
+	"""Return how many rings are still 'active' (<= 30 minutes old)."""
 	try:
-		with open("missyou.json", "r") as f:
-			data = json.load(f)
+		data = load_missyou_data()
 		now = datetime.utcnow()
-		active_rings = 0
+		active = 0
 		for ts in data.get("rings", []):
 			try:
-				ring_time = datetime.fromisoformat(ts.replace("Z", "").split(".")[0]) # strip microseconds/Z
+				# accept both "...Z" and "...Z.sss"
+				ts_clean = ts.replace("Z", "")
+				if "." in ts_clean:
+					ts_clean = ts_clean.split(".", 1)[0]
+				ring_time = datetime.fromisoformat(ts_clean)
+				if (now - ring_time).total_seconds() <= 30 * 60:
+					active += 1
 			except Exception:
 				continue
-			elapsed = (now - ring_time).total_seconds() / 60
-			if elapsed <= 30:
-				active_rings += 1
-		return jsonify({"active_rings": active_rings})
+		return jsonify({"active_rings": active})
 	except Exception as e:
-		return jsonify({"error": str(e)})
+		return jsonify({"error": str(e)}), 500
 
 @app.route("/missyou/rings", methods=["GET"])
 def get_ring_timestamps():
