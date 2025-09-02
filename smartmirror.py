@@ -268,7 +268,7 @@ def rotate_poem():
 
 	else:
 		label_poem.config(text="No poems found or all too long")
-	root.after(300000, rotate_poem)
+	root.after(600000, rotate_poem)
 
 def fade_out_poem(new_poem, step=0):
 	if step > 10:
