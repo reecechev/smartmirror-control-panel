@@ -3,8 +3,33 @@ import math
 import threading
 from typing import Tuple, Optional
 
-import board
-import neopixel
+try:
+	import board
+	import neopixel
+	ON_PI = True
+except ImportError:
+	board = None
+	neopixel = None
+	ON_PI = False
+
+if not ON_PI:
+	class DummyLights:
+		def __init__(self, *a, **k): self._mode_name = "off"
+		def off(self): self._mode_name = "off"
+		def set_color(self, *a, **k): self._mode_name = "solid"
+		def pulse(self, *a, **k): self._mode_name = "pulse"
+		def bounce(self, *a, **k): self._mode_name = "bounce"
+		def wave(self, *a, **k): self._mode_name = "wave"
+		def rainbow(self, *a, **k): self._mode_name = "rainbow"
+		def fade_between(self, *a, **k): self._mode_name = "fade"
+		def heart_pulse(self, *a, **k): self._mode_name = "heart"
+		def override_burn(self, *a, **k): self._mode_name = "override"
+		def weather(self, *a, **k): self._mode_name = "weather"
+		def spotify_mode(self, *a, **k): self._mode_name = "spotify"
+
+	LightsBase = DummyLights
+else:
+	LightsBase = None # we’ll use the real class below
 
 # ====== BASIC SETTINGS ======
 PIN = board.D18 # <-- GPIO18 / physical pin 12
@@ -47,7 +72,7 @@ def wheel(pos: int) -> Color:
 	return (pos * 3, 0, 255 - pos * 3, 0)
 
 
-class Lights:
+class Lights(LightsBase or object):
 	def __init__(self, num_pixels: int = NUM_PIXELS, pin=PIN, brightness: float = BRIGHTNESS):
 		self.num = num_pixels
 		self.pixels = neopixel.NeoPixel(

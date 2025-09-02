@@ -242,6 +242,7 @@ def clear_override():
 	try:
 		with open(OVERRIDE_FILE, "w") as f:
 			json.dump({"override": ""}, f)
+		L.off()
 		return redirect("/poems")
 	except Exception as e:
 		return jsonify({"status": "error", "message": str(e)})
