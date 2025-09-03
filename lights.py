@@ -38,7 +38,7 @@ IS_RGBW = True # your strip is RGBW (SK6812)
 BRIGHTNESS = 0.25 # global brightness (0.0 - 1.0)
 
 # Choose color order (many SK6812 strips are GRBW; if colors look wrong, try RGBW)
-ORDER = neopixel.GRBW if IS_RGBW else neopixel.GRB
+ORDER = (neopixel.GRBW if IS_RGBW else neopixel.GRB) if ON_PI else None
 
 Color = Tuple[int, int, int, int] # (R,G,B,W) for RGBW; use 0 for W on RGB strips
 
@@ -307,5 +307,5 @@ _lights_instance: Optional[Lights] = None
 def get_lights() -> Lights:
 	global _lights_instance
 	if _lights_instance is None:
-		_lights_instance = Lights()
+		_lights_instance = (Lights() if ON_PI else DummyLights())
 	return _lights_instance
