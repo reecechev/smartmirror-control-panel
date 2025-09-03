@@ -32,7 +32,7 @@ else:
 	LightsBase = None # we’ll use the real class below
 
 # ====== BASIC SETTINGS ======
-PIN = board.D18 # <-- GPIO18 / physical pin 12
+PIN = 18 if not ON_PI else board.D18 # <-- GPIO18 / physical pin 12
 NUM_PIXELS = 120 # <-- set to your strip length
 IS_RGBW = True # your strip is RGBW (SK6812)
 BRIGHTNESS = 0.25 # global brightness (0.0 - 1.0)
@@ -302,6 +302,7 @@ class Lights(LightsBase or object):
 
 # Convenience singleton (optional)
 _lights_instance: Optional[Lights] = None
+
 
 def get_lights() -> Lights:
 	global _lights_instance
