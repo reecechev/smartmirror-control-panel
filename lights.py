@@ -7,6 +7,36 @@ import board
 
 ON_PI = True
 
+# Try to load real LED libs. If not available (e.g., on Render), fall back.
+try:
+	import board
+	import neopixel
+	ON_PI = True
+except Exception:
+	board = None
+	neopixel = None
+	ON_PI = False
+
+# When not on the Pi, use a dummy class that has the same methods but does nothing.
+if not ON_PI:
+	class DummyLights:
+		def __init__(self, *a, **k): self._mode_name = "off"
+		def off(self, *a, **k): self._mode_name = "off"
+		def set_color(self, *a, **k): self._mode_name = "solid"
+		def pulse(self, *a, **k): self._mode_name = "pulse"
+		def bounce(self, *a, **k): self._mode_name = "bounce"
+		def wave(self, *a, **k): self._mode_name = "wave"
+		def rainbow(self, *a, **k): self._mode_name = "rainbow"
+		def fade_between(self, *a, **k): self._mode_name = "fade"
+		def heart_pulse(self, *a, **k): self._mode_name = "heart"
+		def override_burn(self, *a, **k): self._mode_name = "override"
+		def weather(self, *a, **k): self._mode_name = "weather"
+		def spotify_mode(self, *a, **k): self._mode_name = "spotify"
+
+	LightsBase = DummyLights # so subclassing works if your file does that
+else:
+	LightsBase = object # real class will use neopixel below
+
 # ====== BASIC SETTINGS ======
 PIN = board.D18
 NUM_PIXELS = 250 # <-- set to your strip length
