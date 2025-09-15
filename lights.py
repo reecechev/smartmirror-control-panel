@@ -3,44 +3,30 @@ import math
 import threading
 from typing import Tuple, Optional
 
-ON_PI = True
+ON_PI = False
+board = None
+neopixel = None
 
 # Try to load real LED libs. If not available (e.g., on Render), fall back.
 try:
-	import board
-	import neopixel
+	import board as _board
+	import neopixel as _neopixel
+	board = _board
+	neopixel = _neopixel
 	ON_PI = True
 except Exception:
-	board = None
-	neopixel = None
-	ON_PI = False
+	pass # keep ON_PI = False and leave board/neopixel as None
 
-# When not on the Pi, use a dummy class that has the same methods but does nothing.
-if not ON_PI:
-	class DummyLights:
-		def __init__(self, *a, **k): self._mode_name = "off"
-		def off(self, *a, **k): self._mode_name = "off"
-		def set_color(self, *a, **k): self._mode_name = "solid"
-		def pulse(self, *a, **k): self._mode_name = "pulse"
-		def bounce(self, *a, **k): self._mode_name = "bounce"
-		def wave(self, *a, **k): self._mode_name = "wave"
-		def rainbow(self, *a, **k): self._mode_name = "rainbow"
-		def fade_between(self, *a, **k): self._mode_name = "fade"
-		def heart_pulse(self, *a, **k): self._mode_name = "heart"
-		def override_burn(self, *a, **k): self._mode_name = "override"
-		def weather(self, *a, **k): self._mode_name = "weather"
-		def spotify_mode(self, *a, **k): self._mode_name = "spotify"
+# ---------- BASIC SETTINGS ----------
+NUM_PIXELS = 250 # set to your strip length
+BRIGHTNESS = 0.25 # 0.0 .. 1.0
 
-	LightsBase = DummyLights # so subclassing works if your file does that
+if ON_PI:
+	PIN = board.D18 # GPIO18 / physical pin 12
+	ORDER = neopixel.GRBW # your strip is GRBW
 else:
-	LightsBase = object # real class will use neopixel below
-
-# ====== BASIC SETTINGS ======
-PIN = board.D18
-NUM_PIXELS = 250 # <-- set to your strip length
-BRIGHTNESS = 0.25 # global brightness (0.0 - 1.0)
-
-ORDER = neopixel.GRBW
+	PIN = 18 # dummy value so code can import on Render
+	ORDER = None # no neopixel on Render
 
 Color = Tuple[int, int, int, int] # (R,G,B,W) for RGBW; use 0 for W on RGB strips
 
