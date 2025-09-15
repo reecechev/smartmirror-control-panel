@@ -254,8 +254,14 @@ def clear_override():
 	try:
 		with open(OVERRIDE_FILE, "w") as f:
 			json.dump({"override": ""}, f)
-		L.off()
-		return redirect("/poems")
+
+		# Turn lights off both locally or via Render
+		if RUN_LOCAL and hasattr(L, "off"):
+			L.off()
+			return redirect("/poems")
+		else:
+			_forward_to_pi("/lights/off", {})
+			return redirect("/poems")
 	except Exception as e:
 		return jsonify({"status": "error", "message": str(e)})
 
@@ -437,12 +443,14 @@ def tap_heart():
 
 	save_missyou_data(data)
 
-# LIGHTS: local -> call the LEDs directly; render -> forward to the Pi
+	# pulse red quickly
 	try:
-		if RUN_LOCAL:
-			L.pulse((255, 0, 0, 0), ms=180)
+		payload = {"color": (255, 0, 0), "ms": 180}
+
+		if RUN_LOCAL and hasattr(L, "pulse"):
+			L.pulse(color=payload["color"], ms=payload["ms"])
 		else:
-			_forward_to_pi("/lights/pulse", {"color": [255, 0, 0, 0], "ms": 180})
+			_forward_to_pi("/lights/pulse", payload)
 	except Exception as e:
 		print("lights/pulse error:", e)
 
@@ -481,15 +489,20 @@ def poem_override():
 	set_override_message(_msg)
 
 	try:
-		if RUN_LOCAL:
-			# purple -> blue (2s), then blue -> red (2s)
-			L.fade_between((128, 0, 128, 0), (0, 0, 255, 0), 2.0)
-			L.fade_between((0, 0, 255, 0), (255, 0, 0, 0), 2.0)
+		# fade purple -> blue (2s)
+		if RUN_LOCAL and hasattr(L, "fade_between"):
+			L.fade_between((128, 0, 128), (0, 0, 255), 2.0)
 		else:
 			_forward_to_pi("/lights/fade",
-				{"c1": [128, 0, 128, 0], "c2": [0, 0, 255, 0], "seconds": 2.0})
+				{"c1": [128, 0, 128], "c2": [0, 0, 255], "seconds": 2.0})
+
+		# then blue -> red (2s)
+		if RUN_LOCAL and hasattr(L, "fade_between"):
+			L.fade_between((0, 0, 255), (255, 0, 0), 2.0)
+		else:
 			_forward_to_pi("/lights/fade",
-				{"c1": [0, 0, 255, 0], "c2": [255, 0, 0, 0], "seconds": 2.0})
+				{"c1": [0, 0, 255], "c2": [255, 0, 0], "seconds": 2.0})
+
 	except Exception as e:
 		print("lights/fade error:", e)
 
