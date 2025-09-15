@@ -2,8 +2,6 @@ import time
 import math
 import threading
 from typing import Tuple, Optional
-import neopixel
-import board
 
 ON_PI = True
 
