@@ -436,14 +436,16 @@ def tap_heart():
 			data["rings"] = data["rings"][-200:]
 
 	save_missyou_data(data)
+
+# LIGHTS: local -> call the LEDs directly; render -> forward to the Pi
 	try:
-		requests.post(
-			"http://127.0.0.1:5000/lights/pulse",
-			json={"color": [255, 0, 0], "ms": 180},
-			timeout=0.5,
-		)
-	except Exception as _e:
-		print("lights/pulse error:", _e)
+		if RUN_LOCAL:
+			L.pulse((255, 0, 0, 0), ms=180)
+		else:
+			_forward_to_pi("/lights/pulse", {"color": [255, 0, 0, 0], "ms": 180})
+	except Exception as e:
+		print("lights/pulse error:", e)
+
 	return jsonify({"clicks": data["clicks"], "rings": len(data["rings"])})
 
 @app.route("/missyou/status")
@@ -475,23 +477,22 @@ def get_ring_timestamps():
 
 @app.route("/poem_override", methods=["POST"])
 def poem_override():
-	msg = request.form.get("override_msg", "")
-	set_override_message(msg)
+	_msg = request.form.get("override_msg", "")
+	set_override_message(_msg)
+
 	try:
-		# fade purple -> blue (2s)
-		requests.post(
-			"http://127.0.0.1:5000/lights/fade",
-			json={"from": [128, 0, 128], "to": [0, 0, 255], "seconds": 2, "loop": False},
-			timeout=0.5,
-		)
-		# then blue -> red (2s)
-		requests.post(
-			"http://127.0.0.1:5000/lights/fade",
-			json={"from": [0, 0, 255], "to": [255, 0, 0], "seconds": 2, "loop": False},
-			timeout=0.5,
-		)
-	except Exception as _e:
-		print("lights/fade error:", _e)
+		if RUN_LOCAL:
+			# purple -> blue (2s), then blue -> red (2s)
+			L.fade_between((128, 0, 128, 0), (0, 0, 255, 0), 2.0)
+			L.fade_between((0, 0, 255, 0), (255, 0, 0, 0), 2.0)
+		else:
+			_forward_to_pi("/lights/fade",
+				{"c1": [128, 0, 128, 0], "c2": [0, 0, 255, 0], "seconds": 2.0})
+			_forward_to_pi("/lights/fade",
+				{"c1": [0, 0, 255, 0], "c2": [255, 0, 0, 0], "seconds": 2.0})
+	except Exception as e:
+		print("lights/fade error:", e)
+
 	return redirect("/poems")
 
 @app.route("/calendar")
