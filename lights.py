@@ -31,6 +31,26 @@ else:
 Color = Tuple[int, int, int, int] # (R,G,B,W) for RGBW; use 0 for W on RGB strips
 
 
+# ---------- fallback base class ----------
+if not ON_PI:
+	class DummyLights:
+		def __init__(self, *a, **k): self._mode_name = "off"
+		def off(self, *a, **k): self._mode_name = "off"
+		def set_color(self, *a, **k): self._mode_name = "solid"
+		def pulse(self, *a, **k): self._mode_name = "pulse"
+		def bounce(self, *a, **k): self._mode_name = "bounce"
+		def wave(self, *a, **k): self._mode_name = "wave"
+		def rainbow(self, *a, **k): self._mode_name = "rainbow"
+		def fade_between(self, *a, **k): self._mode_name = "fade"
+		def heart_pulse(self, *a, **k): self._mode_name = "heart"
+		def override_burn(self, *a, **k): self._mode_name = "override"
+		def weather(self, *a, **k): self._mode_name = "weather"
+		def spotify_mode(self, *a, **k): self._mode_name = "spotify"
+		LightsBase = DummyLights
+else:
+	LightsBase = object # or real LED class if ON_PI
+
+
 def clamp255(x: int) -> int:
 	return max(0, min(255, int(x)))
 
