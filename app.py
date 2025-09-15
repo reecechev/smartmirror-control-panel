@@ -533,6 +533,7 @@ def delete_reminder():
 		return jsonify({"error": "Reminder not found"}), 404
 
 # ======================================================================================================    LIGHTS    =====================================================================================================================
+
 @app.route("/lights/off", methods=["POST", "GET"])
 def lights_off():
 	try:
@@ -541,95 +542,109 @@ def lights_off():
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
 
+
 @app.route("/lights/set", methods=["POST"])
 def lights_set():
 	"""
 	JSON body supports either:
 	{"r":255,"g":0,"b":180,"w":0,"brightness":0.3}
-	or
-	{"hex":"#FF00B4","w":0,"brightness":0.3}
+	or {"hex":"#FF00B4","w":0,"brightness":0.3}
 	"""
 	try:
 		data = request.get_json(force=True) or {}
+
+		# brightness (optional)
+		if "brightness" in data and hasattr(L, "pixels"):
+			try:
+				L.pixels.brightness = float(data.get("brightness"))
+			except Exception:
+				pass
+
+		# color
 		if "hex" in data:
 			hx = data["hex"].lstrip("#")
 			r = int(hx[0:2], 16); g = int(hx[2:4], 16); b = int(hx[4:6], 16)
 		else:
 			r = int(data.get("r", 0)); g = int(data.get("g", 0)); b = int(data.get("b", 0))
 		w = int(data.get("w", 0))
-		if "brightness" in data and hasattr(L, "pixels"):
-			try:
-				L.pixels.brightness = float(data["brightness"])
-			except Exception:
-				pass
+
 		L.set_color(r, g, b, w)
 		return jsonify({"status": "ok", "color": {"r": r, "g": g, "b": b, "w": w}})
 	except Exception as e:
 		return jsonify({"error": str(e)}), 400
 
+
 @app.route("/lights/mode", methods=["POST"])
 def lights_mode():
 	"""
-	JSON body: {"mode":"pulse|wave|rainbow|fade","args":{...}}
+	JSON body:
+	{"mode":"pulse|wave|rainbow|fade", "args":{...}}
+
 	Examples:
-	{"mode":"pulse","args":{"color":[0,0,255,0], "seconds":2.0}}
-	{"mode":"wave","args":{"base":[0,120,255,0], "wavelength":18, "speed":0.02}}
-	{"mode":"rainbow","args":{"speed":0.02}}
-	{"mode":"fade","args":{"c1":[255,0,0,0], "c2":[0,0,255,0], "period":3.0}}
+	{"mode":"pulse", "args":{"color":[0,0,255,0], "seconds":2.0}}
+	{"mode":"wave", "args":{"base":[0,120,255,0], "wavelength":18, "speed":0.02}}
+	{"mode":"rainbow", "args":{"speed":0.02}}
+	{"mode":"fade", "args":{"c1":[255,0,0,0], "c2":[0,0,255,0], "period":3.0}}
 	"""
 	try:
 		data = request.get_json(force=True) or {}
 		mode = (data.get("mode") or "").lower()
 		args = data.get("args") or {}
 
-		if mode == "pulse" and hasattr(L, "pulse"): L.pulse(tuple(args.get("color",[0,0,255,0])), float(args.get("seconds",2.0)))
-		elif mode == "wave" and hasattr(L, "wave"): L.wave(tuple(args.get("base",[0,120,255,0])), int(args.get("wavelength",18)), float(args.get("speed",0.02)))
-		elif mode == "rainbow" and hasattr(L, "rainbow"): L.rainbow(float(args.get("speed",0.02)), int(args.get("step",2)))
-		elif mode == "fade" and hasattr(L, "fade_between"): L.fade_between(tuple(args.get("c1",[255,0,0,0])), tuple(args.get("c2",[0,0,255,0])), float(args.get("period",3.0)))
+		if mode == "pulse" and hasattr(L, "pulse"):
+			L.pulse(tuple(args.get("color", [0, 0, 255, 0])), float(args.get("seconds", 2.0)))
+		elif mode == "wave" and hasattr(L, "wave"):
+			L.wave(tuple(args.get("base", [0, 120, 255, 0])), int(args.get("wavelength", 18)), float(args.get("speed", 0.02)))
+		elif mode == "rainbow" and hasattr(L, "rainbow"):
+			L.rainbow(float(args.get("speed", 0.02)), int(args.get("step", 2)))
+		elif mode == "fade" and hasattr(L, "fade_between"):
+			L.fade_between(tuple(args.get("c1", [255, 0, 0, 0])), tuple(args.get("c2", [0, 0, 255, 0])), float(args.get("period", 3.0)))
 		else:
 			return jsonify({"error": f"unknown mode or not supported: {mode}"}), 400
 
-		return jsonify({"status":"ok","mode":mode})
+		return jsonify({"status": "ok", "mode": mode})
 	except Exception as e:
 		return jsonify({"error": str(e)}), 400
 
+
+# Convenience explicit endpoints (your app already calls these)
 @app.route("/lights/pulse", methods=["POST"])
 def lights_pulse():
-	data = request.get_json(silent=True) or {}
-	color = tuple(data.get("color", [255, 0, 0]))
-	ms = int(data.get("ms", 180))
 	try:
-		import lights
-		lights.pulse(color, ms=ms)
+		data = request.get_json(silent=True) or {}
+		color = tuple(data.get("color", [255, 0, 0, 0]))
+		ms = int(data.get("ms", 180))
+		L.pulse(color, ms/1000.0)
+		return jsonify({"status": "ok"})
 	except Exception as e:
-		print("lights pulse error:", e)
-	return jsonify({"status": "ok"})
+		return jsonify({"error": str(e)}), 400
+
 
 @app.route("/lights/fade", methods=["POST"])
 def lights_fade():
-	data = request.get_json(silent=True) or {}
-	c1 = tuple(data.get("from", [0, 0, 255]))
-	c2 = tuple(data.get("to", [255, 0, 255]))
-	seconds = float(data.get("seconds", 5))
-	loop = bool(data.get("loop", False))
 	try:
-		import lights
-		lights.fade(c1, c2, seconds=seconds, loop=loop)
+		data = request.get_json(silent=True) or {}
+		c1 = tuple(data.get("c1", [255, 0, 0, 0]))
+		c2 = tuple(data.get("c2", [0, 0, 255, 0]))
+		period = float(data.get("seconds", 3.0))
+		loop = bool(data.get("loop", False)) # arg kept for compatibility; fade_between loops by design
+		L.fade_between(c1, c2, period)
+		return jsonify({"status": "ok"})
 	except Exception as e:
-		print("lights fade error:", e)
-	return jsonify({"status": "ok"})
+		return jsonify({"error": str(e)}), 400
+
 
 @app.route("/lights/weather", methods=["POST"])
 def lights_weather():
-	# body: {"condition":"Rain"} or {"condition": "<your app's condition string>"}
 	try:
-		cond = (request.get_json(force=True) or {}).get("condition","")
+		cond = (request.get_json(force=True) or {}).get("condition", "")
 		if hasattr(L, "weather"):
 			L.weather(cond)
-			return jsonify({"status":"ok","condition":cond})
-		return jsonify({"error":"weather() not implemented"}), 400
+			return jsonify({"status": "ok", "condition": cond})
+		return jsonify({"error": "weather() not implemented"}), 400
 	except Exception as e:
 		return jsonify({"error": str(e)}), 400
+
 
 @app.route("/lights/override", methods=["POST"])
 def lights_override():
@@ -637,10 +652,11 @@ def lights_override():
 		secs = float((request.get_json(silent=True) or {}).get("seconds", 2.0))
 		if hasattr(L, "override_burn"):
 			L.override_burn(seconds=secs)
-			return jsonify({"status":"ok"})
-		return jsonify({"error":"override_burn() not implemented"}), 400
+			return jsonify({"status": "ok"})
+		return jsonify({"error": "override_burn() not implemented"}), 400
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
+
 
 @app.route("/lights/heart", methods=["POST"])
 def lights_heart():
