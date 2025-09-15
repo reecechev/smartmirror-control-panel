@@ -46,7 +46,7 @@ if not ON_PI:
 		def override_burn(self, *a, **k): self._mode_name = "override"
 		def weather(self, *a, **k): self._mode_name = "weather"
 		def spotify_mode(self, *a, **k): self._mode_name = "spotify"
-		LightsBase = DummyLights
+	LightsBase = DummyLights
 else:
 	LightsBase = object # or real LED class if ON_PI
 
