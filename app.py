@@ -532,7 +532,7 @@ def delete_reminder():
 	except IndexError:
 		return jsonify({"error": "Reminder not found"}), 404
 
-# -------- LIGHTS: basic control --------
+# ======================================================================================================    LIGHTS    =====================================================================================================================
 @app.route("/lights/off", methods=["POST", "GET"])
 def lights_off():
 	try:
@@ -631,16 +631,6 @@ def lights_weather():
 	except Exception as e:
 		return jsonify({"error": str(e)}), 400
 
-@app.route("/lights/heart", methods=["POST"])
-def lights_heart():
-	try:
-		if hasattr(L, "heart_pulse"):
-			L.heart_pulse()
-			return jsonify({"status":"ok"})
-		return jsonify({"error":"heart_pulse() not implemented"}), 400
-	except Exception as e:
-		return jsonify({"error": str(e)}), 500
-
 @app.route("/lights/override", methods=["POST"])
 def lights_override():
 	try:
@@ -652,7 +642,6 @@ def lights_override():
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
 
-# ========= LIGHTS ===========
 @app.route("/lights/heart", methods=["POST"])
 def lights_heart():
 	try:
@@ -663,7 +652,7 @@ def lights_heart():
 	except Exception as e:
 		return jsonify({"status": "error", "message": str(e)}), 500
 
-# ---- NGROK SYNC (store the live public URL on Render) ----
+# ===================================================================================================    NGROK    =========================================================================================================================
 
 def _read_ngrok_file():
 	try:
