@@ -2,43 +2,17 @@ import time
 import math
 import threading
 from typing import Tuple, Optional
+import neopixel
+import board
 
-try:
-	import board
-	import neopixel
-	ON_PI = True
-except ImportError:
-	board = None
-	neopixel = None
-	ON_PI = False
-
-if not ON_PI:
-	class DummyLights:
-		def __init__(self, *a, **k): self._mode_name = "off"
-		def off(self): self._mode_name = "off"
-		def set_color(self, *a, **k): self._mode_name = "solid"
-		def pulse(self, *a, **k): self._mode_name = "pulse"
-		def bounce(self, *a, **k): self._mode_name = "bounce"
-		def wave(self, *a, **k): self._mode_name = "wave"
-		def rainbow(self, *a, **k): self._mode_name = "rainbow"
-		def fade_between(self, *a, **k): self._mode_name = "fade"
-		def heart_pulse(self, *a, **k): self._mode_name = "heart"
-		def override_burn(self, *a, **k): self._mode_name = "override"
-		def weather(self, *a, **k): self._mode_name = "weather"
-		def spotify_mode(self, *a, **k): self._mode_name = "spotify"
-
-	LightsBase = DummyLights
-else:
-	LightsBase = None # we’ll use the real class below
+ON_PI = True
 
 # ====== BASIC SETTINGS ======
-PIN = 18 if not ON_PI else board.D18 # <-- GPIO18 / physical pin 12
-NUM_PIXELS = 120 # <-- set to your strip length
-IS_RGBW = True # your strip is RGBW (SK6812)
+PIN = board.D18
+NUM_PIXELS = 250 # <-- set to your strip length
 BRIGHTNESS = 0.25 # global brightness (0.0 - 1.0)
 
-# Choose color order (many SK6812 strips are GRBW; if colors look wrong, try RGBW)
-ORDER = (neopixel.GRBW if IS_RGBW else neopixel.GRB) if ON_PI else None
+ORDER = neopixel.GRBW
 
 Color = Tuple[int, int, int, int] # (R,G,B,W) for RGBW; use 0 for W on RGB strips
 

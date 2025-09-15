@@ -9,14 +9,9 @@ from flask import send_from_directory
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from urllib.parse import urlparse
+from lights import get_lights
 
-try:
-	from lights import get_lights
-	L = get_lights()
-except Exception:
-	# Fallback if your module only has Lights()
-	from lights import Lights
-	L = Lights()
+L = get_lights()
 
 app = Flask(__name__)
 CORS(app)
@@ -656,6 +651,17 @@ def lights_override():
 		return jsonify({"error":"override_burn() not implemented"}), 400
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
+
+# ========= LIGHTS ===========
+@app.route("/lights/heart", methods=["POST"])
+def lights_heart():
+	try:
+		if hasattr(L, "heart_pulse"):
+			L.heart_pulse()
+			return jsonify({"status": "ok"}), 200
+		return jsonify({"status": "error", "message": "heart_pulse() not found"}), 400
+	except Exception as e:
+		return jsonify({"status": "error", "message": str(e)}), 500
 
 # ---- NGROK SYNC (store the live public URL on Render) ----
 
