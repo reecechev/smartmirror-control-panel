@@ -10,7 +10,6 @@ from pathlib import Path
 from werkzeug.utils import secure_filename
 from urllib.parse import urlparse
 from lights import get_lights
-import requests
 
 L = get_lights()
 
