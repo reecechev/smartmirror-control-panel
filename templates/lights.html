@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>Lights</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<style>
+		body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; }
+		.row { margin: 16px 0; }
+		.btn { padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; background:#f8f8f8; cursor:pointer; }
+		.btn + .btn { margin-left: 8px; }
+		.group { border: 1px solid #eee; padding: 12px; border-radius: 10px; }
+		label { display:block; font-weight: 600; margin-bottom: 6px; }
+		input[type="color"] { width: 52px; height: 36px; padding:0; border: none; background: none; }
+		input[type="range"] { width: 240px; vertical-align: middle; }
+		#status { font-size: 0.95rem; color: #555; margin-top: 8px; min-height: 1.2em; }
+		small { color:#777; }
+	</style>
+</head>
+<body>
+
+	<h2>Lights</h2>
+
+	<!-- Color + White + Brightness -->
+	<div class="group">
+		<div class="row">
+			<label>Color</label>
+			<input id="color" type="color" value="#ff0000" />
+			<small>RGB only (white channel set separately below)</small>
+		</div>
+
+		<div class="row">
+			<label>White channel</label>
+			<input id="white" type="range" min="0" max="255" step="1" value="0" />
+			<span id="whiteVal">0</span>
+		</div>
+
+		<div class="row">
+			<label>Brightness</label>
+			<input id="brightness" type="range" min="5" max="100" step="1" value="25" />
+			<span id="brightVal">25%</span>
+			<div><small>Maps to your `/lights/set` brightness (0.0–1.0)</small></div>
+		</div>
+
+		<div class="row">
+			<button class="btn" onclick="applySolid()">Set Color</button>
+			<button class="btn" onclick="lightsOff()">Off</button>
+		</div>
+
+		<div id="status"></div>
+	</div>
+
+	<!-- White presets -->
+	<div class="group" style="margin-top:16px;">
+		<label>White presets</label>
+		<div class="row">
+			<button class="btn" onclick="setWhitePreset(180)">Warm (≈2700K)</button>
+			<button class="btn" onclick="setWhitePreset(210)">Soft (≈3000K)</button>
+			<button class="btn" onclick="setWhitePreset(230)">Neutral (≈3500–4000K)</button>
+			<button class="btn" onclick="setWhitePreset(255)">Cool (≈5000–6500K)</button>
+		</div>
+		<small>These drive the dedicated W channel on your GRBW strip; RGB is set to 0.</small>
+	</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function hexToRgb(hex) {
+	const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+	return m ? { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) } : { r:255,g:0,b:0 };
+}
+
+function showStatus(text) {
+	$("status").textContent = typeof text === "string" ? text : JSON.stringify(text);
+}
+
+async function postJSON(url, payload) {
+	const res = await fetch(url, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(payload || {})
+	});
+	let body = null;
+	try { body = await res.json(); } catch {}
+	return { status: res.status, body };
+}
+
+async function applySolid() {
+	const { r, g, b } = hexToRgb($("color").value);
+	const w = +$("white").value;
+	const brightness = (+$("brightness").value) / 100.0;
+	const payload = { hex: $("color").value, w, brightness }; // your /lights/set accepts hex + w + brightness
+	const result = await postJSON("/lights/set", payload);
+	showStatus(result.body || result.status);
+}
+
+async function lightsOff() {
+	const result = await postJSON("/lights/off", {});
+	showStatus(result.body || result.status);
+}
+
+function setWhitePreset(wVal) {
+	$("white").value = wVal;
+	$("whiteVal").textContent = wVal;
+	// Set RGB to zero and keep current brightness
+	const brightness = (+$("brightness").value) / 100.0;
+	postJSON("/lights/set", { r:0, g:0, b:0, w: wVal, brightness }).then(res => showStatus(res.body || res.status));
+}
+
+// live labels
+$("white").addEventListener("input", e => $("whiteVal").textContent = e.target.value);
+$("brightness").addEventListener("input", e => $("brightVal").textContent = e.target.value + "%");
+</script>
+</body>
+</html>
