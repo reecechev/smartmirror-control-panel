@@ -111,10 +111,18 @@ class Lights(LightsBase or object):
 		self._mode_name = "off"
 
 	def off(self):
+		"""Stop any animation and drive the strip fully off."""
+		self.stop() # <- kill running animation thread first
 		with self._lock:
-			self.pixels.fill((0, 0, 0, 0))
-			self.pixels.show()
-		self._mode_name = "off"
+			# Send zeros a few times to be sure the latch clears
+			for _ in range(3):
+				self.pixels.fill((0, 0, 0, 0)) # RGBA/W all zero for GRBW strip
+				self.pixels.brightness = 0.0
+				self.pixels.show()
+				time.sleep(0.02)
+			# restore default brightness for next time, but stay dark
+			self.pixels.brightness = BRIGHTNESS
+			self._mode_name = "off"
 
 	# ---------- basic controls ----------
 	def set_color(self, r: int, g: int, b: int, w: int = 0):
