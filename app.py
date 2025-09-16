@@ -30,6 +30,37 @@ MISSYOU_FILE = "missyou.json"
 # If L has real pixels, we’re on the Pi. Otherwise we’re on Render.
 RUN_LOCAL = hasattr(L, "pixels")
 
+
+
+
+@app.route("/_debug/blip", methods=["POST", "GET"])
+def _debug_blip():
+	try:
+		if not RUN_LOCAL:
+			return jsonify({"status": "skipped", "reason": "not on Pi"}), 400
+		# minimal direct drive using your Lights object
+		L.set_color(255, 0, 0, 0) # solid red
+		time.sleep(0.2)
+		L.off()
+		return jsonify({"status": "ok"})
+	except Exception as e:
+		return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
+@app.route("/_debug/lights", methods=["GET"])
+def _debug_lights():
+	return jsonify({
+		"RUN_LOCAL": RUN_LOCAL,
+		"has_pixels": hasattr(L, "pixels"),
+		"has_pulse": hasattr(L, "pulse"),
+		"pixel_order": getattr(L, "ORDER", None),
+		"mode": getattr(L, "_mode_name", None)
+	})
+
+
+
+
 def _forward_to_pi(path: str, payload: dict | None = None):
 	"""Send the same request to the Pi (ngrok base) when running on Render."""
 	url = f"{STATIC_BASE}{path}"
@@ -654,7 +685,6 @@ def lights_mode():
 		return jsonify({"error": str(e)}), 400
 
 
-# Convenience explicit endpoints (your app already calls those)
 @app.route("/lights/pulse", methods=["POST"])
 def lights_pulse():
 	try:
@@ -665,12 +695,16 @@ def lights_pulse():
 
 		color = tuple(data.get("color", [255, 0, 0, 0]))
 		ms = int(data.get("ms", 180))
-		seconds = ms / 1000
-		L.pulse(color, seconds=seconds)
+		seconds = ms / 1000.0
 
-		return jsonify({"status": "ok"})
+		# DEBUG: show exactly what we’re doing
+		print(f"[lights_pulse] RUN_LOCAL={RUN_LOCAL} color={color} ms={ms} seconds={seconds}")
+
+		L.pulse(color, seconds=seconds)
+		return jsonify({"status": "ok", "ran": True, "used_seconds": seconds})
 	except Exception as e:
-		return jsonify({"error": str(e)}), 400
+		print("[lights_pulse] ERROR:", e)
+	return jsonify({"error": str(e)}), 400
 
 
 @app.route("/lights/fade", methods=["POST"])
