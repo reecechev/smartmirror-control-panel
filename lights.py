@@ -279,10 +279,10 @@ class Lights(LightsBase or object):
 						t = i / steps # 0..1
 						# `blend` already exists in your file and handles GRBW correctly
 						c = blend(c1, c2, t)
-							with self._lock:
-								self.pixels.fill(c)
-								self.pixels.show()
-							time.sleep(step_sleep)
+						with self._lock:
+							self.pixels.fill(c)
+							self.pixels.show()
+						time.sleep(step_sleep)
 
 				# leave final color for now (we'll add 'restore previous state' next)
 
