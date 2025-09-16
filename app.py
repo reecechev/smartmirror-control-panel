@@ -501,14 +501,12 @@ def poem_override():
 		# then blue -> red (2s)
 		fade2 = {"c1": [0, 0, 255, 0], "c2": [255, 0, 0, 0], "seconds": 2, "loop": False}
 
-		if RUN_LOCAL and hasattr(L, "fade_between"):
-			L.fade_between(tuple(fade1["c1"]), tuple(fade1["c2"]), fade1["seconds"])
-			L.fade_between(tuple(fade2["c1"]), tuple(fade2["c2"]), fade2["seconds"])
+		if RUN_LOCAL and hasattr(L, "override_burn"):
+			L.override_burn(seconds=10)
 		else:
-			_forward_to_pi("/lights/fade", fade1)
-			_forward_to_pi("/lights/fade", fade2)
+			_forward_to_pi("/lights/override", {"seconds": 10})
 	except Exception as e:
-		print("lights/fade error:", e)
+		print("lights/override error:", e)
 
 	return redirect("/poems")
 
