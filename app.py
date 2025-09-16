@@ -31,36 +31,6 @@ MISSYOU_FILE = "missyou.json"
 RUN_LOCAL = hasattr(L, "pixels")
 
 
-
-
-@app.route("/_debug/blip", methods=["POST", "GET"])
-def _debug_blip():
-	try:
-		if not RUN_LOCAL:
-			return jsonify({"status": "skipped", "reason": "not on Pi"}), 400
-		# minimal direct drive using your Lights object
-		L.set_color(255, 0, 0, 0) # solid red
-		time.sleep(0.2)
-		L.off()
-		return jsonify({"status": "ok"})
-	except Exception as e:
-		return jsonify({"status": "error", "message": str(e)}), 500
-
-
-
-@app.route("/_debug/lights", methods=["GET"])
-def _debug_lights():
-	return jsonify({
-		"RUN_LOCAL": RUN_LOCAL,
-		"has_pixels": hasattr(L, "pixels"),
-		"has_pulse": hasattr(L, "pulse"),
-		"pixel_order": getattr(L, "ORDER", None),
-		"mode": getattr(L, "_mode_name", None)
-	})
-
-
-
-
 def _forward_to_pi(path: str, payload: dict | None = None):
 	"""Send the same request to the Pi (ngrok base) when running on Render."""
 	url = f"{STATIC_BASE}{path}"
@@ -280,19 +250,19 @@ def get_override():
 		data = json.load(f)
 	return jsonify(data)
 
-@app.route('/clear_override', methods=["POST"])
+@app.route("/clear_override", methods=["POST"])
 def clear_override():
 	try:
 		with open(OVERRIDE_FILE, "w") as f:
 			json.dump({"override": ""}, f)
 
-		# Turn lights off both locally or via Render
+		# turn lights off
 		if RUN_LOCAL and hasattr(L, "off"):
 			L.off()
-			return redirect("/poems")
 		else:
 			_forward_to_pi("/lights/off", {})
-			return redirect("/poems")
+
+		return redirect("/poems")
 	except Exception as e:
 		return jsonify({"status": "error", "message": str(e)})
 
@@ -464,26 +434,21 @@ def tap_heart():
 	# Bump clicks
 	data["clicks"] = int(data.get("clicks", 0)) + 1
 
-	# Every 10 clicks -> add a ring timestamp
+	# Every 10 clicks -> add a ring timestamp AND trigger a one-shot heartbeat
 	if data["clicks"] % 10 == 0:
 		now = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 		data["rings"].append(now)
-	if len(data["rings"]) > 200:
-		data["rings"] = data["rings"][-200:]
+		if len(data["rings"]) > 200:
+			data["rings"] = data["rings"][-200:]
 
-	save_missyou_data(data)
-
-	# always go through our /lights/pulse endpoint (it will do the right thing)
-	payload = {"color": [255, 0, 0, 0], "ms": 180} # GRBW; W=0
-	try:
-		r = requests.post(
-			"http://127.0.0.1:5000/lights/pulse",
-			json=payload,
-			timeout=0.8
-		)
-		pulse_info = {"status": "ok", "relay_code": r.status_code, "relay_body": r.text}
-	except Exception as e:
-		pulse_info = {"status": "error", "message": str(e)}
+		# fire a one-shot heart beat (local or forwarded)
+		try:
+			if RUN_LOCAL and hasattr(L, "heart_pulse"):
+				L.heart_pulse() # one-shot; won’t loop forever
+			else:
+				_forward_to_pi("/lights/heart", {})
+		except Exception as e:
+			print("lights/heart error:", e)
 
 	return jsonify({"clicks": data["clicks"], "rings": len(data["rings"]), "pulse": pulse_info})
 
@@ -516,28 +481,26 @@ def get_ring_timestamps():
 
 @app.route("/poem_override", methods=["POST"])
 def poem_override():
-	_msg = request.form.get("override_msg", "")
-	set_override_message(_msg)
+	msg = request.form.get("override_msg", "")
+	set_override_message(msg)
 
 	try:
 		# fade purple -> blue (2s)
-		if RUN_LOCAL and hasattr(L, "fade_between"):
-			L.fade_between((128, 0, 128), (0, 0, 255), 2.0)
-		else:
-			_forward_to_pi("/lights/fade",
-				{"c1": [128, 0, 128], "c2": [0, 0, 255], "seconds": 2.0})
-
+		fade1 = {"c1": [128, 0, 128, 0], "c2": [0, 0, 255, 0], "seconds": 2, "loop": False}
 		# then blue -> red (2s)
-		if RUN_LOCAL and hasattr(L, "fade_between"):
-			L.fade_between((0, 0, 255), (255, 0, 0), 2.0)
-		else:
-			_forward_to_pi("/lights/fade",
-				{"c1": [0, 0, 255], "c2": [255, 0, 0], "seconds": 2.0})
+		fade2 = {"c1": [0, 0, 255, 0], "c2": [255, 0, 0, 0], "seconds": 2, "loop": False}
 
+		if RUN_LOCAL and hasattr(L, "fade_between"):
+			L.fade_between(tuple(fade1["c1"]), tuple(fade1["c2"]), fade1["seconds"])
+			L.fade_between(tuple(fade2["c1"]), tuple(fade2["c2"]), fade2["seconds"])
+		else:
+			_forward_to_pi("/lights/fade", fade1)
+			_forward_to_pi("/lights/fade", fade2)
 	except Exception as e:
 		print("lights/fade error:", e)
 
 	return redirect("/poems")
+
 
 @app.route("/calendar")
 def calendar():

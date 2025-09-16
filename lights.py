@@ -231,17 +231,26 @@ class Lights(LightsBase or object):
 
 	# ---------- event cues ----------
 	def heart_pulse(self):
-		"""Quick red flash on heart event."""
+		"""Double-beat red flash (dun-dun), then stop."""
 		self._mode_name = "heart"
+
 		def _run():
-			for level in (0.0, 0.5, 1.0, 0.5, 0.0):
-				c = (int(255 * level), 0, 0, 0)
-				with self._lock:
-					self.pixels.fill(c)
-					self.pixels.show()
-				time.sleep(0.08)
-			self.off()
-		self._start_thread(_run)
+			# Two quick beats with a tiny pause between them
+			for beat in (1, 2):
+				# quick ramp up and down (total ~0.20s per beat)
+				for t in [0.0, 0.4, 1.0, 0.4, 0.0]:
+					c = (int(255 * t), 0, 0, 0) # GRBW: red only
+					with self._lock:
+						self.pixels.fill(c)
+						self.pixels.show()
+					time.sleep(0.05) # 5 × 0.05s = 0.25s; tweak if you want faster/slower
+
+				if beat == 1:
+					time.sleep(0.12) # small gap between the two beats
+
+			self.off() # leave strip off at the end
+
+		self._start_thread(_run) # one-shot thread; ends by itself
 
 	def override_burn(self, seconds: float = 2.0):
 		"""Slow burn purple/blue/red for override start."""
