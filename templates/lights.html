@@ -1,115 +1,202 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Lights</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<style>
-		body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; }
-		.row { margin: 16px 0; }
-		.btn { padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; background:#f8f8f8; cursor:pointer; }
-		.btn + .btn { margin-left: 8px; }
-		.group { border: 1px solid #eee; padding: 12px; border-radius: 10px; }
-		label { display:block; font-weight: 600; margin-bottom: 6px; }
-		input[type="color"] { width: 52px; height: 36px; padding:0; border: none; background: none; }
-		input[type="range"] { width: 240px; vertical-align: middle; }
-		#status { font-size: 0.95rem; color: #555; margin-top: 8px; min-height: 1.2em; }
-		small { color:#777; }
+		:root{
+			--bg:#111; /* page background */
+			--card:#1b1b1b; /* panels */
+			--card-2:#262626; /* inner wells */
+			--text:#fff; /* primary text */
+			--muted:#b9b9b9; /* secondary text */
+			--btn:#333; /* button bg */
+			--btn-hover:#444; /* button hover */
+			--accent:#6a5acd; /* subtle accent (slate) */
+			--ring:#3a3a3a; /* borders */
+		}
+		*{box-sizing:border-box}
+		html,body{height:100%}
+		body{
+			margin:0;
+			padding:24px 16px 60px;
+			background:var(--bg);
+			color:var(--text);
+			font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;
+		}
+
+		.wrap{max-width:720px;margin:0 auto}
+		h1{font-size:36px;margin:6px 0 18px}
+
+		.card{
+			background:var(--card);
+			border:1px solid var(--ring);
+			border-radius:16px;
+			padding:18px;
+			margin:16px 0;
+			box-shadow: 0 10px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03);
+		}
+
+		.section-title{font-size:18px;margin:0 0 10px}
+
+		/* circular color swatch */
+		.color-row{
+			display:flex;align-items:center;justify-content:center;gap:16px;margin:8px 0 14px;
+		}
+		.swatch{
+			width:120px;height:120px;border-radius:50%;
+			border:2px solid var(--ring);
+			background:#ff0000; /* default; JS updates it */
+			box-shadow: inset 0 0 0 3px rgba(255,255,255,.05), 0 8px 24px rgba(0,0,0,.35);
+			cursor:pointer;
+		}
+		/* hide the native color input but keep it accessible */
+		#colorInput{position:absolute;opacity:0;pointer-events:none}
+
+		.controls{display:flex;flex-wrap:wrap;gap:10px}
+
+		button{
+			background:var(--btn);
+			color:var(--text);
+			border:1px solid var(--ring);
+			border-radius:12px;
+			padding:10px 14px;
+			font-size:16px;
+			cursor:pointer;
+		}
+		button:hover{background:var(--btn-hover)}
+		.ghost{background:transparent}
+		.pill{border-radius:999px}
+
+		.row{display:flex;gap:14px;align-items:center;margin:10px 0}
+		.row label{min-width:120px;color:var(--muted)}
+		input[type="range"]{width:100%}
+
+		.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+		@media (min-width:640px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
+
+		.note{color:var(--muted);font-size:14px;margin-top:8px}
 	</style>
 </head>
 <body>
+	<div class="wrap">
+		<h1>Lights</h1>
 
-	<h2>Lights</h2>
+		<!-- Color + brightness -->
+		<div class="card">
+			<div class="section-title">Color</div>
 
-	<!-- Color + White + Brightness -->
-	<div class="group">
-		<div class="row">
-			<label>Color</label>
-			<input id="color" type="color" value="#ff0000" />
-			<small>RGB only (white channel set separately below)</small>
+			<div class="color-row">
+				<!-- Big circular swatch triggers the color input -->
+				<div id="swatch" class="swatch" title="Pick a color"></div>
+				<input id="colorInput" type="color" value="#ff0000" aria-label="Pick color">
+			</div>
+
+			<div class="row">
+				<label>White channel</label>
+				<input id="white" type="range" min="0" max="255" value="0">
+			</div>
+
+			<div class="row">
+				<label>Brightness</label>
+				<input id="brightness" type="range" min="1" max="100" value="25">
+			</div>
+
+			<div class="controls">
+				<button id="setColorBtn">Set Color</button>
+				<button class="ghost" id="offBtn">Off</button>
+			</div>
+		<!-- no JSON dump -->
 		</div>
 
-		<div class="row">
-			<label>White channel</label>
-			<input id="white" type="range" min="0" max="255" step="1" value="0" />
-			<span id="whiteVal">0</span>
+		<!-- White presets -->
+		<div class="card">
+			<div class="section-title">White presets</div>
+			<div class="grid">
+				<button class="pill" data-w="180">Warm (≈2700K)</button>
+				<button class="pill" data-w="200">Soft (≈3000K)</button>
+				<button class="pill" data-w="220">Neutral (≈3500–4000K)</button>
+				<button class="pill" data-w="255">Cool (≈5000–6500K)</button>
+			</div>
+			<div class="note">These drive the dedicated W channel on your GRBW strip; RGB is set to 0.</div>
 		</div>
 
-		<div class="row">
-			<label>Brightness</label>
-			<input id="brightness" type="range" min="5" max="100" step="1" value="25" />
-			<span id="brightVal">25%</span>
-			<div><small>Maps to your `/lights/set` brightness (0.0–1.0)</small></div>
+		<!-- Modes -->
+		<div class="card">
+			<div class="section-title">Animations</div>
+			<div class="controls">
+				<button class="pill" data-mode="pulse">Pulse</button>
+				<button class="pill" data-mode="wave">Wave</button>
+				<button class="pill" data-mode="rainbow">Rainbow</button>
+				<button class="pill" data-mode="fade">Fade</button>
+			</div>
 		</div>
-
-		<div class="row">
-			<button class="btn" onclick="applySolid()">Set Color</button>
-			<button class="btn" onclick="lightsOff()">Off</button>
-		</div>
-
-		<div id="status"></div>
 	</div>
 
-	<!-- White presets -->
-	<div class="group" style="margin-top:16px;">
-		<label>White presets</label>
-		<div class="row">
-			<button class="btn" onclick="setWhitePreset(180)">Warm (≈2700K)</button>
-			<button class="btn" onclick="setWhitePreset(210)">Soft (≈3000K)</button>
-			<button class="btn" onclick="setWhitePreset(230)">Neutral (≈3500–4000K)</button>
-			<button class="btn" onclick="setWhitePreset(255)">Cool (≈5000–6500K)</button>
-		</div>
-		<small>These drive the dedicated W channel on your GRBW strip; RGB is set to 0.</small>
-	</div>
+	<script>
+		// helpers
+		async function post(url, body){
+			const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body || {})});
+			return r.json().catch(()=> ({}));
+		}
+		const swatch = document.getElementById('swatch');
+		const colorInput = document.getElementById('colorInput');
+		const white = document.getElementById('white');
+		const bright = document.getElementById('brightness');
 
-<script>
-const $ = (id) => document.getElementById(id);
+		// swatch opens color picker
+		swatch.addEventListener('click', () => colorInput.click());
+		// keep swatch filled with chosen color
+		colorInput.addEventListener('input', () => {
+			swatch.style.background = colorInput.value;
+		});
 
-function hexToRgb(hex) {
-	const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-	return m ? { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) } : { r:255,g:0,b:0 };
-}
+		// Set Color => /lights/set
+		document.getElementById('setColorBtn').addEventListener('click', async () => {
+			const hex = colorInput.value.replace('#','');
+			const r = parseInt(hex.slice(0,2),16);
+			const g = parseInt(hex.slice(2,4),16);
+			const b = parseInt(hex.slice(4,6),16);
+			const w = parseInt(white.value,10) || 0;
+			const brightness = Math.max(0.01, Math.min(1.0, (parseInt(bright.value,10) || 25)/100));
+			await post('/lights/set', {r,g,b,w,brightness});
+			// no JSON text shown
+		});
 
-function showStatus(text) {
-	$("status").textContent = typeof text === "string" ? text : JSON.stringify(text);
-}
+		// Off
+		document.getElementById('offBtn').addEventListener('click', async () => {
+			await post('/lights/off', {});
+		});
 
-async function postJSON(url, payload) {
-	const res = await fetch(url, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(payload || {})
-	});
-	let body = null;
-	try { body = await res.json(); } catch {}
-	return { status: res.status, body };
-}
+		// White presets
+		document.querySelectorAll('[data-w]').forEach(btn=>{
+			btn.addEventListener('click', async () => {
+				white.value = btn.getAttribute('data-w');
+				// RGB=0, brightness from slider
+				const brightness = Math.max(0.01, Math.min(1.0, (parseInt(bright.value,10) || 25)/100));
+				await post('/lights/set', {r:0,g:0,b:0,w:parseInt(white.value,10),brightness});
+				// make swatch visually white-ish
+				swatch.style.background = '#ffffff';
+			});
+		});
 
-async function applySolid() {
-	const { r, g, b } = hexToRgb($("color").value);
-	const w = +$("white").value;
-	const brightness = (+$("brightness").value) / 100.0;
-	const payload = { hex: $("color").value, w, brightness }; // your /lights/set accepts hex + w + brightness
-	const result = await postJSON("/lights/set", payload);
-	showStatus(result.body || result.status);
-}
-
-async function lightsOff() {
-	const result = await postJSON("/lights/off", {});
-	showStatus(result.body || result.status);
-}
-
-function setWhitePreset(wVal) {
-	$("white").value = wVal;
-	$("whiteVal").textContent = wVal;
-	// Set RGB to zero and keep current brightness
-	const brightness = (+$("brightness").value) / 100.0;
-	postJSON("/lights/set", { r:0, g:0, b:0, w: wVal, brightness }).then(res => showStatus(res.body || res.status));
-}
-
-// live labels
-$("white").addEventListener("input", e => $("whiteVal").textContent = e.target.value);
-$("brightness").addEventListener("input", e => $("brightVal").textContent = e.target.value + "%");
-</script>
+		// Modes (use current color + white)
+		document.querySelectorAll('[data-mode]').forEach(btn=>{
+			btn.addEventListener('click', async () => {
+				const hex = colorInput.value.replace('#','');
+				const color = [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16), parseInt(white.value,10) || 0];
+				const mode = btn.getAttribute('data-mode');
+				if(mode === 'pulse'){
+					await post('/lights/pulse', {color, ms:180});
+				}else if(mode === 'wave'){
+					await post('/lights/mode', {mode:'wave', args:{base:[0,120,255,0], wavelength:18, speed:0.02}});
+				}else if(mode === 'rainbow'){
+					await post('/lights/mode', {mode:'rainbow', args:{speed:0.02}});
+				}else if(mode === 'fade'){
+					await post('/lights/mode', {mode:'fade', args:{c1:color, c2:[0,0,0,color[3]], period:3.0}});
+				}
+			});
+		});
+	</script>
 </body>
 </html>
