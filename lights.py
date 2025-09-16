@@ -252,20 +252,42 @@ class Lights(LightsBase or object):
 
 		self._start_thread(_run) # one-shot thread; ends by itself
 
-	def override_burn(self, seconds: float = 2.0):
-		"""Slow burn purple/blue/red for override start."""
-		self._mode_name = "override"
-		seq = [(128, 0, 180, 0), (0, 0, 255, 0), (255, 0, 64, 0)]
-		def _run():
-			t_per = seconds / len(seq)
-			for col in seq:
-				for k in range(30):
-					with self._lock:
-						self.pixels.fill(col)
-						self.pixels.show()
-					time.sleep(t_per / 30.0)
-			self.off()
-		self._start_thread(_run)
+
+		def override_burn(self, seconds: float = 10.0):
+			"""Smooth one-shot burn: red -> purple -> blue over `seconds`."""
+			self.stop() # stop any running animation first
+			self._mode_name = "override"
+
+			# GRBW tuples (W=0). Keyframes: red -> purple -> blue
+			seq = [(255, 0, 0, 0), (128, 0, 180, 0), (0, 0, 255, 0)]
+
+			def _run():
+				# Split total time evenly across segments (red->purple, purple->blue)
+				segments = list(zip(seq[:-1], seq[1:]))
+				if not segments:
+					return
+				seg_secs = max(0.1, seconds / len(segments))
+
+				# ~50 FPS per segment for smoothness. Raise/lower if you like.
+				steps = max(1, int(seg_secs / 0.02))
+				step_sleep = seg_secs / steps
+
+				for c1, c2 in segments:
+					for i in range(steps + 1):
+						if self._stop.is_set():
+							return
+						t = i / steps # 0..1
+						# `blend` already exists in your file and handles GRBW correctly
+						c = blend(c1, c2, t)
+							with self._lock:
+								self.pixels.fill(c)
+								self.pixels.show()
+							time.sleep(step_sleep)
+
+				# leave final color for now (we'll add 'restore previous state' next)
+
+			self._start_thread(_run) # one-shot; ends by itself
+
 
 	# ---------- weather wrapper ----------
 	def weather(self, condition: str):
