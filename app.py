@@ -442,17 +442,19 @@ def tap_heart():
 
 	save_missyou_data(data)
 
-	# Pulse red quickly
+	# always go through our /lights/pulse endpoint (it will do the right thing)
+	payload = {"color": [255, 0, 0, 0], "ms": 180} # GRBW; W=0
 	try:
-		payload = {"color": [255, 0, 0, 0], "ms": 180} # GRBW; W=0
-		if RUN_LOCAL and hasattr(L, "pulse"):
-			L.pulse(tuple(payload["color"]), ms=payload["ms"])
-		else:
-			_forward_to_pi("/lights/pulse", payload)
+		r = requests.post(
+			"http://127.0.0.1:5000/lights/pulse",
+			json=payload,
+			timeout=0.8
+		)
+		pulse_info = {"status": "ok", "relay_code": r.status_code, "relay_body": r.text}
 	except Exception as e:
-		print("lights/pulse error:", e)
+		pulse_info = {"status": "error", "message": str(e)}
 
-	return jsonify({"clicks": data["clicks"], "rings": len(data["rings"])})
+	return jsonify({"clicks": data["clicks"], "rings": len(data["rings"]), "pulse": pulse_info})
 
 @app.route("/missyou/status")
 def missyou_status():
