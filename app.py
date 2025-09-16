@@ -433,22 +433,20 @@ def tap_heart():
 	# Bump clicks
 	data["clicks"] = int(data.get("clicks", 0)) + 1
 
-	# Every 10 clicks -> add a ring timestamp (UTC, no microseconds)
+	# Every 10 clicks -> add a ring timestamp
 	if data["clicks"] % 10 == 0:
 		now = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 		data["rings"].append(now)
-		# keep list bounded so file never grows unbounded
-		if len(data["rings"]) > 200:
-			data["rings"] = data["rings"][-200:]
+	if len(data["rings"]) > 200:
+		data["rings"] = data["rings"][-200:]
 
 	save_missyou_data(data)
 
-	# pulse red quickly
+	# Pulse red quickly
 	try:
-		payload = {"color": (255, 0, 0), "ms": 180}
-
+		payload = {"color": [255, 0, 0, 0], "ms": 180} # GRBW; W=0
 		if RUN_LOCAL and hasattr(L, "pulse"):
-			L.pulse(color=payload["color"], ms=payload["ms"])
+			L.pulse(tuple(payload["color"]), ms=payload["ms"])
 		else:
 			_forward_to_pi("/lights/pulse", payload)
 	except Exception as e:
