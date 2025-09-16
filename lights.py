@@ -94,6 +94,7 @@ class Lights(LightsBase or object):
 		self._stop = threading.Event()
 		self._thread: Optional[threading.Thread] = None
 		self._mode_name = "off"
+		self._last_solid: Tuple[int, int, int, int] = (0, 0, 0, 0)
 
 	# ---------- threading helpers ----------
 	def _start_thread(self, target, *args, **kwargs):
@@ -111,26 +112,54 @@ class Lights(LightsBase or object):
 		self._mode_name = "off"
 
 	def off(self):
-		"""Stop any animation and drive the strip fully off."""
-		self.stop() # <- kill running animation thread first
 		with self._lock:
-			# Send zeros a few times to be sure the latch clears
-			for _ in range(3):
-				self.pixels.fill((0, 0, 0, 0)) # RGBA/W all zero for GRBW strip
-				self.pixels.brightness = 0.0
-				self.pixels.show()
-				time.sleep(0.02)
-			# restore default brightness for next time, but stay dark
-			self.pixels.brightness = BRIGHTNESS
+			self.pixels.fill((0, 0, 0, 0))
+			self.pixels.show()
+			# leave brightness unchanged, just go dark
 			self._mode_name = "off"
 
-	# ---------- basic controls ----------
 	def set_color(self, r: int, g: int, b: int, w: int = 0):
 		self.stop()
 		with self._lock:
-			self.pixels.fill((clamp255(r), clamp255(g), clamp255(b), clamp255(w)))
+			c = (clamp255(r), clamp255(g), clamp255(b), clamp255(w))
+			self.pixels.fill(c)
 			self.pixels.show()
-		self._mode_name = "solid"
+			self._last_solid = c
+			self._mode_name = "solid"
+
+	def _snapshot(self):
+		"""Capture enough info to restore whatever was happening before an event animation."""
+		snap = {
+			"mode": self._mode_name,
+			"solid": self._last_solid,
+			"brightness": getattr(self.pixels, "brightness", None),
+		}
+		return snap
+
+	def _restore(self, snap):
+		"""Return to the previous state recorded by _snapshot()."""
+		# restore brightness first if present
+		if snap.get("brightness") is not None:
+			try:
+				self.pixels.brightness = snap["brightness"]
+			except Exception:
+				pass
+
+		mode = snap.get("mode", "off")
+		if mode == "off":
+			self.off()
+		elif mode == "solid":
+			r, g, b, w = snap.get("solid", (0, 0, 0, 0))
+			self.set_color(r, g, b, w)
+		else:
+			# If we later add long-running modes (wave/rainbow/etc.),
+			# we can record enough args in the snapshot to re-launch them here.
+			# For now, default to previous solid or off.
+			if snap.get("solid") and snap["solid"] != (0, 0, 0, 0):
+				r, g, b, w = snap["solid"]
+				self.set_color(r, g, b, w)
+			else:
+				self.off()
 
 	# ---------- animations (run in threads) ----------
 	def pulse(self, color: Color, seconds: float = 2.0):
@@ -231,63 +260,62 @@ class Lights(LightsBase or object):
 
 	# ---------- event cues ----------
 	def heart_pulse(self):
-		"""Double-beat red flash (dun-dun), then stop."""
+		"""Double-beat red flash (dun-dun), then restore previous state."""
+		prev = self._snapshot()
+		print("snap before: ", prev)
 		self._mode_name = "heart"
 
 		def _run():
-			# Two quick beats with a tiny pause between them
-			for beat in (1, 2):
-				# quick ramp up and down (total ~0.20s per beat)
-				for t in [0.0, 0.4, 1.0, 0.4, 0.0]:
-					c = (int(255 * t), 0, 0, 0) # GRBW: red only
-					with self._lock:
-						self.pixels.fill(c)
-						self.pixels.show()
-					time.sleep(0.05) # 5 × 0.05s = 0.25s; tweak if you want faster/slower
+			try:
+				# two quick beats with a tiny pause
+				for beat in (1, 2):
+					# quick ramp up and down (total ~0.25s per beat)
+					for t in [0.0, 0.4, 1.0, 0.4, 0.0]:
+						c = (int(255 * t), 0, 0, 0) # GRBW: red only
+						with self._lock:
+							self.pixels.fill(c)
+							self.pixels.show()
+						time.sleep(0.05) # 5 steps × 0.05s = 0.25s
+					if beat == 1:
+						time.sleep(0.12) # gap between beats
+			finally:
+				# always restore whatever was happening before
+				self._restore(prev)
 
-				if beat == 1:
-					time.sleep(0.12) # small gap between the two beats
-
-			self.off() # leave strip off at the end
-
-		self._start_thread(_run) # one-shot thread; ends by itself
-
+		self._start_thread(_run)
 
 	def override_burn(self, seconds: float = 10.0):
-		"""Smooth one-shot burn: red -> purple -> blue over `seconds`."""
-		self.stop() # stop any running animation first
+		"""Smoothly fade Red → Purple → Blue over ~seconds, then restore."""
+		prev = self._snapshot()
 		self._mode_name = "override"
 
-		# GRBW tuples (W=0). Keyframes: red -> purple -> blue
+		# keyframes in GRBW (W=0). Red -> Purple -> Blue
 		seq = [(255, 0, 0, 0), (128, 0, 180, 0), (0, 0, 255, 0)]
 
 		def _run():
-			# Split total time evenly across segments (red->purple, purple->blue)
-			segments = list(zip(seq[:-1], seq[1:]))
-			if not segments:
-				return
-			seg_secs = max(0.1, seconds / len(segments))
+			try:
+				total_steps = 60 * max(1, int(seconds)) # ~60 FPS
+				# three segments: 0->1, 1->2
+				segments = [(seq[0], seq[1]), (seq[1], seq[2])]
+				steps_per_seg = max(1, total_steps // len(segments))
 
-			# ~50 FPS per segment for smoothness. Raise/lower if you like.
-			steps = max(1, int(seg_secs / 0.02))
-			step_sleep = seg_secs / steps
+				for c1, c2 in segments:
+					for s in range(steps_per_seg + 1):
+						t = s / steps_per_seg
+						c = (
+							int(c1[0] + (c2[0] - c1[0]) * t),
+							int(c1[1] + (c2[1] - c1[1]) * t),
+							int(c1[2] + (c2[2] - c1[2]) * t),
+							0,
+						)
+						with self._lock:
+							self.pixels.fill(c)
+							self.pixels.show()
+						time.sleep(1.0 / 60.0)
+			finally:
+				self._restore(prev)
 
-			for c1, c2 in segments:
-				for i in range(steps + 1):
-					if self._stop.is_set():
-						return
-					t = i / steps # 0..1
-					# `blend` already exists in your file and handles GRBW correctly
-					c = blend(c1, c2, t)
-					with self._lock:
-						self.pixels.fill(c)
-						self.pixels.show()
-					time.sleep(step_sleep)
-
-			# leave final color for now (we'll add 'restore previous state' next)
-
-		self._start_thread(_run) # one-shot; ends by itself
-
+		self._start_thread(_run)
 
 	# ---------- weather wrapper ----------
 	def weather(self, condition: str):

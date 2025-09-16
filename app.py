@@ -567,6 +567,10 @@ def delete_reminder():
 		return jsonify({"error": "Reminder not found"}), 404
 
 # ======================================================================================================    LIGHTS    =====================================================================================================================
+@app.route("/lights")
+def lights_page():
+	return render_template("lights.html")
+
 
 @app.route("/lights/off", methods=["POST", "GET"])
 def lights_off():
