@@ -665,7 +665,9 @@ def lights_pulse():
 
 		color = tuple(data.get("color", [255, 0, 0, 0]))
 		ms = int(data.get("ms", 180))
-		L.pulse(color, ms=ms)
+		seconds = ms / 1000
+		L.pulse(color, seconds=seconds)
+
 		return jsonify({"status": "ok"})
 	except Exception as e:
 		return jsonify({"error": str(e)}), 400
