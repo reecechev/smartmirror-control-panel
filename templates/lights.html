@@ -1,32 +1,33 @@
 <!doctype html>
 <html>
 <head>
-	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 	<title>Lights</title>
 	<style>
 		:root{
 			--bg:#111; /* page background */
 			--card:#1b1b1b; /* panels */
-			--card-2:#262626; /* inner wells */
+			--well:#262626; /* inner wells */
 			--text:#fff; /* primary text */
-			--muted:#b9b9b9; /* secondary text */
+			--muted:#9b9bb9; /* secondary text */
 			--btn:#333; /* button bg */
 			--btn-hover:#444; /* button hover */
 			--accent:#6a5acd; /* subtle accent (slate) */
 			--ring:#3a3a3a; /* borders */
 		}
-		*{box-sizing:border-box}
+		*,*:before,*:after{box-sizing:border-box}
 		html,body{height:100%}
 		body{
 			margin:0;
 			padding:24px 16px 60px;
 			background:var(--bg);
 			color:var(--text);
-			font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;
+			font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
 		}
-
-		.wrap{max-width:720px;margin:0 auto}
-		h1{font-size:36px;margin:6px 0 18px}
+		.wrap{max-width:720px; margin:0 auto}
+		h1{font-size:36px; margin:6px 0 18px}
+		.back-link{ display:inline-block; margin:0 0 6px; color:#bfbfff; text-decoration:none }
+		.back-link:before{ content:"← "; }
 
 		.card{
 			background:var(--card);
@@ -36,83 +37,68 @@
 			margin:16px 0;
 			box-shadow: 0 10px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03);
 		}
+		.section-title{font-size:18px; margin:0 0 10px}
 
-		.section-title{font-size:18px;margin:0 0 10px}
-
-		/* circular color swatch */
-		.color-row{
-			display:flex;align-items:center;justify-content:center;gap:16px;margin:8px 0 14px;
-		}
+		/* color swatch */
+		.color-row{ display:flex; align-items:center; justify-content:center; gap:16px; margin:8px 0 14px }
 		.swatch{
-			width:120px;height:120px;border-radius:50%;
-			border:2px solid var(--ring);
-			background:#ff0000; /* default; JS updates it */
-			box-shadow: inset 0 0 0 3px rgba(255,255,255,.05), 0 8px 24px rgba(0,0,0,.35);
+			width:140px; height:140px; border-radius:50%;
+			border:3px solid #555; background:#ff0000;
+			box-shadow: inset 0 0 6px rgba(255,255,255,.06), 0 0 0 3px rgba(0,0,0,.35);
 			cursor:pointer;
+			outline: 1px solid rgba(255,255,255,.05);
 		}
-		/* hide the native color input but keep it accessible */
-		#colorInput{position:absolute;opacity:0;pointer-events:none}
+		/* hide native color input but keep it accessible */
+		#colorInput{ position:absolute; opacity:0; pointer-events:none }
 
-		.controls{display:flex;flex-wrap:wrap;gap:10px}
+		.sliders label{ display:block; color:var(--muted); margin:14px 0 6px }
+		input[type=range]{ width:100% }
 
+		.controls{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px }
 		button{
-			background:var(--btn);
-			color:var(--text);
+			background:var(--btn); color:var(--text);
 			border:1px solid var(--ring);
-			border-radius:12px;
-			padding:10px 14px;
-			font-size:16px;
-			cursor:pointer;
+			border-radius:12px; padding:10px 14px; font-size:16px; cursor:pointer;
 		}
-		button:hover{background:var(--btn-hover)}
-		.ghost{background:transparent}
-		.pill{border-radius:999px}
-
-		.row{display:flex;gap:14px;align-items:center;margin:10px 0}
-		.row label{min-width:120px;color:var(--muted)}
-		input[type="range"]{width:100%}
-
-		.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-		@media (min-width:640px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
-
-		.note{color:var(--muted);font-size:14px;margin-top:8px}
+		button:hover{ background:var(--btn-hover) }
+		.pill{ border-radius:999px }
+		.row{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px }
+		@media (min-width:640px){ .grid{ grid-template-columns:repeat(4, minmax(0,1fr)) } }
+		.note{ color:var(--muted); font-size:14px; margin-top:8px }
 	</style>
 </head>
 <body>
 	<div class="wrap">
+		<a class="back-link" href="{{ url_for('home') }}">Back</a>
 		<h1>Lights</h1>
 
-		<!-- Color + brightness -->
+		<!-- Color / basic controls -->
 		<div class="card">
 			<div class="section-title">Color</div>
 
+			<!-- big round button -->
 			<div class="color-row">
-				<!-- Big circular swatch triggers the color input -->
-				<div id="swatch" class="swatch" title="Pick a color"></div>
-				<input id="colorInput" type="color" value="#ff0000" aria-label="Pick color">
+				<button id="colorSwatch" class="swatch" aria-label="Pick color"></button>
+				<input id="colorInput" type="color" value="#ff0000">
 			</div>
 
-			<div class="row">
+			<div class="sliders">
 				<label>White channel</label>
-				<input id="white" type="range" min="0" max="255" value="0">
-			</div>
-
-			<div class="row">
+				<input id="whiteSlider" type="range" min="0" max="255" step="1" value="0">
 				<label>Brightness</label>
-				<input id="brightness" type="range" min="1" max="100" value="25">
+				<input id="brightSlider" type="range" min="0" max="100" step="1" value="25">
 			</div>
 
 			<div class="controls">
 				<button id="setColorBtn">Set Color</button>
-				<button class="ghost" id="offBtn">Off</button>
+				<button id="offBtn">Off</button>
 			</div>
-		<!-- no JSON dump -->
 		</div>
 
 		<!-- White presets -->
 		<div class="card">
 			<div class="section-title">White presets</div>
-			<div class="grid">
+			<div class="row grid">
 				<button class="pill" data-w="180">Warm (≈2700K)</button>
 				<button class="pill" data-w="200">Soft (≈3000K)</button>
 				<button class="pill" data-w="220">Neutral (≈3500–4000K)</button>
@@ -124,77 +110,98 @@
 		<!-- Modes -->
 		<div class="card">
 			<div class="section-title">Animations</div>
-			<div class="controls">
+			<div class="row">
 				<button class="pill" data-mode="pulse">Pulse</button>
 				<button class="pill" data-mode="wave">Wave</button>
 				<button class="pill" data-mode="rainbow">Rainbow</button>
 				<button class="pill" data-mode="fade">Fade</button>
+				<button class="pill" data-mode="weather">Weather (auto)</button>
 			</div>
 		</div>
 	</div>
 
 	<script>
-		// helpers
+		// ---------- helpers ----------
 		async function post(url, body){
-			const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body || {})});
-			return r.json().catch(()=> ({}));
+			const r = await fetch(url, {
+				method: 'POST',
+				headers: {'Content-Type':'application/json'},
+				body: JSON.stringify(body || {})
+			});
+			// ignore JSON body to keep UI clean; you can console.log if needed
+			return r.ok;
 		}
-		const swatch = document.getElementById('swatch');
+		function hexToRgb(hex){
+			const h = hex.replace('#','');
+			return [
+				parseInt(h.slice(0,2),16),
+				parseInt(h.slice(2,4),16),
+				parseInt(h.slice(4,6),16)
+			];
+		}
+
+		// ---------- elements ----------
+		const swatch = document.getElementById('colorSwatch');
 		const colorInput = document.getElementById('colorInput');
-		const white = document.getElementById('white');
-		const bright = document.getElementById('brightness');
+		const white = document.getElementById('whiteSlider');
+		const bright = document.getElementById('brightSlider');
 
-		// swatch opens color picker
+		// swatch opens color picker + mirrors color
 		swatch.addEventListener('click', () => colorInput.click());
-		// keep swatch filled with chosen color
-		colorInput.addEventListener('input', () => {
-			swatch.style.background = colorInput.value;
-		});
+		colorInput.addEventListener('input', () => { swatch.style.background = colorInput.value; });
+		// initial paint
+		swatch.style.background = colorInput.value;
 
-		// Set Color => /lights/set
+		// Set Color -> /lights/set
 		document.getElementById('setColorBtn').addEventListener('click', async () => {
-			const hex = colorInput.value.replace('#','');
-			const r = parseInt(hex.slice(0,2),16);
-			const g = parseInt(hex.slice(2,4),16);
-			const b = parseInt(hex.slice(4,6),16);
-			const w = parseInt(white.value,10) || 0;
-			const brightness = Math.max(0.01, Math.min(1.0, (parseInt(bright.value,10) || 25)/100));
-			await post('/lights/set', {r,g,b,w,brightness});
-			// no JSON text shown
+			const [r,g,b] = hexToRgb(colorInput.value);
+			const payload = {
+				r, g, b,
+				w: parseInt(white.value,10) || 0,
+				brightness: Math.max(0, Math.min(1, (parseInt(bright.value,10) || 25)/100))
+			};
+			await post('/lights/set', payload);
 		});
 
-		// Off
+		// Off -> /lights/off (always kill animations & go dark)
 		document.getElementById('offBtn').addEventListener('click', async () => {
 			await post('/lights/off', {});
 		});
 
-		// White presets
-		document.querySelectorAll('[data-w]').forEach(btn=>{
+		// White presets (set W; RGB=0)
+		document.querySelectorAll('[data-w]').forEach(btn => {
 			btn.addEventListener('click', async () => {
-				white.value = btn.getAttribute('data-w');
-				// RGB=0, brightness from slider
-				const brightness = Math.max(0.01, Math.min(1.0, (parseInt(bright.value,10) || 25)/100));
-				await post('/lights/set', {r:0,g:0,b:0,w:parseInt(white.value,10),brightness});
-				// make swatch visually white-ish
-				swatch.style.background = '#ffffff';
+				const w = parseInt(btn.getAttribute('data-w'),10);
+				const brightness = Math.max(0, Math.min(1, (parseInt(bright.value,10) || 25)/100));
+				await post('/lights/set', {r:0,g:0,b:0,w,brightness});
 			});
 		});
 
-		// Modes (use current color + white)
-		document.querySelectorAll('[data-mode]').forEach(btn=>{
+		// Modes: use *current* color + white/brightness
+		document.querySelectorAll('[data-mode]').forEach(btn => {
 			btn.addEventListener('click', async () => {
-				const hex = colorInput.value.replace('#','');
-				const color = [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16), parseInt(white.value,10) || 0];
+				const [r,g,b] = hexToRgb(colorInput.value);
+				const w = parseInt(white.value,10) || 0;
+				const brightness = Math.max(0, Math.min(1, (parseInt(bright.value,10) || 25)/100));
+				const color = [r,g,b,0]; // animations use RGB; keep W via brightness/base if needed
+
 				const mode = btn.getAttribute('data-mode');
-				if(mode === 'pulse'){
-					await post('/lights/pulse', {color, ms:180});
-				}else if(mode === 'wave'){
-					await post('/lights/mode', {mode:'wave', args:{base:[0,120,255,0], wavelength:18, speed:0.02}});
-				}else if(mode === 'rainbow'){
-					await post('/lights/mode', {mode:'rainbow', args:{speed:0.02}});
-				}else if(mode === 'fade'){
-					await post('/lights/mode', {mode:'fade', args:{c1:color, c2:[0,0,0,color[3]], period:3.0}});
+
+				if (mode === 'pulse') {
+					await post('/lights/pulse', { color, ms: 180 });
+				} else if (mode === 'wave') {
+					await post('/lights/mode', { mode:'wave', args:{ base:color, wavelength:18, speed:0.02 }});
+				} else if (mode === 'rainbow') {
+					await post('/lights/mode', { mode:'rainbow', args:{ speed:0.02 }});
+				} else if (mode === 'fade') {
+					await post('/lights/mode', { mode:'fade', args:{ c1:color, c2:[0,0,0,0], period:3.0 }});
+				} else if (mode === 'weather') {
+					// auto weather; backend maps your local conditions to effects
+					await post('/lights/weather', { condition: 'auto' });
 				}
+
+				// also push brightness/W so the strip matches UI when animations end
+				await post('/lights/set', { r, g, b, w, brightness });
 			});
 		});
 	</script>
