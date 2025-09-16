@@ -445,7 +445,7 @@ def tap_heart():
 		try:
 			r = requests.post(
 				"http://127.0.0.1:5000/lights/heart",
-				json=payload
+				json=payload,
 				timeout=0.8
 			)
 		except Exception as e:
