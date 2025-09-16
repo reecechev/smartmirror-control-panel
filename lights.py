@@ -107,7 +107,8 @@ class Lights(LightsBase or object):
 		self._stop.set()
 		t = self._thread
 		if t and t.is_alive():
-			t.join(timeout=1.0)
+			if threading.current_thread() is not t: # only join if it's not the same thread
+				t.join(timeout=1.0)
 		self._thread = None
 		self._mode_name = "off"
 
@@ -128,17 +129,16 @@ class Lights(LightsBase or object):
 			self._mode_name = "solid"
 
 	def _snapshot(self):
-		"""Capture enough info to restore whatever was happening before an event animation."""
-		snap = {
-			"mode": self._mode_name,
-			"solid": self._last_solid,
+		"""Capture enough info to restore previous state after an event animation."""
+		return {
+			"mode": self._mode_name, # "off" | "solid" | "pulse" | ...
+			"solid": getattr(self, "_last_solid", (0, 0, 0, 0)),
 			"brightness": getattr(self.pixels, "brightness", None),
 		}
-		return snap
 
 	def _restore(self, snap):
 		"""Return to the previous state recorded by _snapshot()."""
-		# restore brightness first if present
+		# restore brightness first (best effort)
 		if snap.get("brightness") is not None:
 			try:
 				self.pixels.brightness = snap["brightness"]
@@ -146,20 +146,28 @@ class Lights(LightsBase or object):
 				pass
 
 		mode = snap.get("mode", "off")
+
 		if mode == "off":
-			self.off()
-		elif mode == "solid":
+			with self._lock:
+				self.pixels.fill((0, 0, 0, 0))
+				self.pixels.show()
+			self._mode_name = "off"
+			return
+
+		if mode == "solid":
 			r, g, b, w = snap.get("solid", (0, 0, 0, 0))
+			# set_color() calls stop(), which is safe now due to the self-join guard
+			self.set_color(r, g, b, w)
+			return
+
+		# Previous mode was an animation (pulse/wave/rainbow/etc.).
+		# We don't keep its arguments yet, so fallback to last solid or off.
+		r, g, b, w = snap.get("solid", (0, 0, 0, 0))
+		if r or g or b or w:
 			self.set_color(r, g, b, w)
 		else:
-			# If we later add long-running modes (wave/rainbow/etc.),
-			# we can record enough args in the snapshot to re-launch them here.
-			# For now, default to previous solid or off.
-			if snap.get("solid") and snap["solid"] != (0, 0, 0, 0):
-				r, g, b, w = snap["solid"]
-				self.set_color(r, g, b, w)
-			else:
-				self.off()
+			self.off()
+
 
 	# ---------- animations (run in threads) ----------
 	def pulse(self, color: Color, seconds: float = 2.0):
