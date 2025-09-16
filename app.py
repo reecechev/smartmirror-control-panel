@@ -434,6 +434,8 @@ def tap_heart():
 	# Bump clicks
 	data["clicks"] = int(data.get("clicks", 0)) + 1
 
+	fired = False
+
 	# Every 10 clicks -> add a ring timestamp AND trigger a one-shot heartbeat
 	if data["clicks"] % 10 == 0:
 		now = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
@@ -441,19 +443,25 @@ def tap_heart():
 		if len(data["rings"]) > 200:
 			data["rings"] = data["rings"][-200:]
 
-		# fire a one-shot heart beat (local or forwarded)
 		try:
-			r = requests.post(
-				"http://127.0.0.1:5000/lights/heart",
-				json=payload,
-				timeout=0.8
-			)
+			if RUN_LOCAL and hasattr(L, "heart_pulse"):
+				# We are on the Pi -> call the one-shot animation directly
+				L.heart_pulse()
+			else:
+				# We are on Render -> forward to the Pi’s /lights/heart
+				_forward_to_pi("/lights/heart", {})
+				fired = True
 		except Exception as e:
-			pulse_info = {"status": "error", "message": str(e)}
+			print("lights/heart error:", e)
 
 	save_missyou_data(data)
 
-	return jsonify({"clicks": data["clicks"], "rings": len(data["rings"]), "pulse": pulse_info})
+	return jsonify({
+		"clicks": data["clicks"],
+		"rings": len(data.get("rings", [])),
+		"fired": fired
+	})
+
 
 @app.route("/missyou/status")
 def missyou_status():
