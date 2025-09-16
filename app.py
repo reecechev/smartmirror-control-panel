@@ -443,12 +443,15 @@ def tap_heart():
 
 		# fire a one-shot heart beat (local or forwarded)
 		try:
-			if RUN_LOCAL and hasattr(L, "heart_pulse"):
-				L.heart_pulse() # one-shot; won’t loop forever
-			else:
-				_forward_to_pi("/lights/heart", {})
+			r = requests.post(
+				"http://127.0.0.1:5000/lights/heart",
+				json=payload
+				timeout=0.8
+			)
 		except Exception as e:
-			print("lights/heart error:", e)
+			pulse_info = {"status": "error", "message": str(e)}
+
+	save_missyou_data(data)
 
 	return jsonify({"clicks": data["clicks"], "rings": len(data["rings"]), "pulse": pulse_info})
 
