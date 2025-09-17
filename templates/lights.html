@@ -90,7 +90,7 @@
 			<!-- big round button -->
 			<div class="color-row">
 				<div class="swatch" id="colorSwatch">
-					<input id="colorInput" type="color" style="display:none" value="#ff0000">
+					<input id="colorInput" type="color" value="#ff0000">
 				</div>
 			</div>
 
@@ -167,6 +167,8 @@
 		const paint = () => { swatch.style.background = colorInput.value; };
 		paint(); // initial
 		colorInput.addEventListener('input', paint);
+
+		swatch.addEventListener('click', () => colorInput.click());
 
 		// Set Color -> /lights/set
 		document.getElementById('setColorBtn').addEventListener('click', async () => {
