@@ -127,7 +127,9 @@
 				<button class="pill" data-mode="wave">Wave</button>
 				<button class="pill" data-mode="rainbow">Rainbow</button>
 				<button class="pill" data-mode="fade">Fade</button>
+				<button class="pill" data-mode="bounce">Bounce</button>
 				<button class="pill" data-mode="weather">Weather (auto)</button>
+				<button class="pill" data-mode="spotify">Tunes</button>
 			</div>
 		</div>
 	</div>
@@ -217,7 +219,13 @@
 					// auto weather; backend maps your local conditions to effects
 					await post('/lights/weather', { condition: 'auto' });
 				}
-
+				else if (mode === 'bounce') {
+					await post('/lights/mode', { mode:'bounce', args:{ color, tail:6, speed:0.01 }});
+				}
+				else if (mode === 'spotify') {
+					// simple defaults; uses current color
+					await post('/lights/mode', { mode:'spotify', args:{ tempo_bpm:100, energy:0.6, color }});
+				}
 			});
 		});
 	</script>

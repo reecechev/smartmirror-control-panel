@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 from urllib.parse import urlparse
 from lights import get_lights
 import requests
+from smartmirror import get_weather
 
 L = get_lights()
 
@@ -653,6 +654,14 @@ def lights_mode():
 			L.fade_between(tuple(args.get("c1", [255, 0, 0, 0])),
 					tuple(args.get("c2", [0, 0, 255, 0])),
 					float(args.get("period", 3.0)))
+		elif mode == "bounce" and hasattr(L, "bounce"):
+			L.bounce(tuple(args.get("color", (255, 0, 0, 0))),
+				int(args.get("tail", 6)),
+				float(args.get("speed", 0.01)))
+		elif mode == "spotify" and hasattr(L, "spotify_mode"):
+			L.spotify_mode(float(args.get("tempo_bpm", 100.0)),
+				float(args.get("energy", 0.6)),
+				tuple(args.get("color", (0, 255, 180, 0))))
 		else:
 			return jsonify({"error": f"unknown mode or not supported: {mode}"}), 400
 
@@ -705,18 +714,25 @@ def lights_fade():
 @app.route("/lights/weather", methods=["POST"])
 def lights_weather():
 	try:
-		data = request.get_json(force=True) or {}
 		if not RUN_LOCAL:
-			body, code = _forward_to_pi("/lights/weather", data)
+			body, code = _forward_to_pi("/lights/weather", {})
 			return jsonify(body), code
 
-		cond = (data.get("condition", "") or "").lower()
+		# Call your real weather function
+		w = get_weather()
+		if not w or "condition" not in w:
+			return jsonify({"error": "no weather data"}), 500
+
+		cond = w["condition"].lower()
+
 		if hasattr(L, "weather"):
 			L.weather(cond)
 			return jsonify({"status": "ok", "condition": cond})
-		return jsonify({"error": "weather() not implemented"}), 400
+		else:
+			return jsonify({"error": "weather() not implemented"}), 400
+
 	except Exception as e:
-		return jsonify({"error": str(e)}), 400
+		return jsonify({"error": str(e)}), 500
 
 
 @app.route("/lights/override", methods=["POST"])
