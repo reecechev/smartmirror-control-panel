@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 from urllib.parse import urlparse
 from lights import get_lights
 import requests
-from smartmirror import get_weather
+from weather_source import get_weather
 
 L = get_lights()
 
