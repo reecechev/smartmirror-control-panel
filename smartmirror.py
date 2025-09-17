@@ -4,7 +4,6 @@ import time
 from datetime import datetime, timedelta
 import json
 import random
-from calendar_display import get_combined_events
 from reminders import reminders
 from app import get_override_message
 from config import get_ngrok_url
