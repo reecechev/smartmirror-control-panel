@@ -95,6 +95,11 @@ class Lights(LightsBase or object):
 		self._thread: Optional[threading.Thread] = None
 		self._mode_name = "off"
 		self._last_solid: Tuple[int, int, int, int] = (0, 0, 0, 0)
+		self._long_modes = {"pulse", "bounce", "wave", "fade_between", "weather", "rainbow", "spotify_mode"}
+
+	def _remember_mode(self, name: str, **kwargs):
+		self._mode_name = name
+		self._mode_args = dict(kwargs or {})
 
 	# ---------- threading helpers ----------
 	def _start_thread(self, target, *args, **kwargs):
@@ -132,12 +137,16 @@ class Lights(LightsBase or object):
 		"""Capture enough info to restore previous state after an event animation."""
 		return {
 			"mode": self._mode_name, # "off" | "solid" | "pulse" | ...
+			"args": dict(self._mode_args or {}),
 			"solid": getattr(self, "_last_solid", (0, 0, 0, 0)),
 			"brightness": getattr(self.pixels, "brightness", None),
 		}
 
 	def _restore(self, snap):
 		"""Return to the previous state recorded by _snapshot()."""
+		if not isinstance(snap, dict):
+			return
+
 		# restore brightness first (best effort)
 		if snap.get("brightness") is not None:
 			try:
@@ -146,33 +155,32 @@ class Lights(LightsBase or object):
 				pass
 
 		mode = snap.get("mode", "off")
+		args = snap.get("args") or {}
 
-		if mode == "off":
+		if mode in self._long_modes:
+			getattr(self, mode)(**args)
+
+		elif mode == "off":
 			with self._lock:
 				self.pixels.fill((0, 0, 0, 0))
 				self.pixels.show()
 			self._mode_name = "off"
 			return
 
-		if mode == "solid":
+		elif mode == "solid":
 			r, g, b, w = snap.get("solid", (0, 0, 0, 0))
 			# set_color() calls stop(), which is safe now due to the self-join guard
 			self.set_color(r, g, b, w)
 			return
 
-		# Previous mode was an animation (pulse/wave/rainbow/etc.).
-		# We don't keep its arguments yet, so fallback to last solid or off.
-		r, g, b, w = snap.get("solid", (0, 0, 0, 0))
-		if r or g or b or w:
-			self.set_color(r, g, b, w)
 		else:
 			self.off()
-
 
 	# ---------- animations (run in threads) ----------
 	def pulse(self, color: Color, seconds: float = 2.0):
 		"""Breathing pulse up/down."""
 		self._mode_name = "pulse"
+		self._remember_mode("pulse", color=color, seconds=seconds)
 		def _run():
 			while not self._stop.is_set():
 				# up
@@ -193,9 +201,10 @@ class Lights(LightsBase or object):
 					time.sleep(seconds / 120.0)
 		self._start_thread(_run)
 
-	def bounce(self, color: Color = (255, 0, 0, 0), tail: int = 5, speed: float = 0.01):
+	def bounce(self, color: Color = (255, 0, 0, 0), tail: int = 10, speed: float = 0.01):
 		"""Ping-pong dot with optional fading tail."""
 		self._mode_name = "bounce"
+		self._remember_mode("bounce", color=color, tail=tail, speed=speed)
 		def _run():
 			idx = 0
 			direction = 1
@@ -215,9 +224,10 @@ class Lights(LightsBase or object):
 				time.sleep(speed)
 		self._start_thread(_run)
 
-	def wave(self, base: Color = (0, 0, 255, 0), wavelength: int = 16, speed: float = 0.02):
+	def wave(self, base: Color = (0, 0, 255, 0), wavelength: int = 16, speed: float = 0.1):
 		"""Sine intensity wave across the strip."""
 		self._mode_name = "wave"
+		self._remember_mode("wave", base=base, wavelength=wavelength, speed=speed)
 		def _run():
 			phase = 0.0
 			while not self._stop.is_set():
@@ -233,6 +243,7 @@ class Lights(LightsBase or object):
 	def rainbow(self, speed: float = 0.01, step: int = 2):
 		"""Classic moving rainbow."""
 		self._mode_name = "rainbow"
+		self._remember_mode("rainbow", speed=speed, step=step)
 		def _run():
 			pos = 0
 			while not self._stop.is_set():
@@ -244,9 +255,10 @@ class Lights(LightsBase or object):
 				time.sleep(speed)
 		self._start_thread(_run)
 
-	def fade_between(self, c1: Color, c2: Color, period: float = 3.0):
+	def fade_between(self, c1: Color, c2: Color, period: float = 5.0):
 		"""Smoothly fade back and forth between two colors."""
 		self._mode_name = "fade_between"
+		self._remember_mode("fade_between", c1=c1, c2=c2, period=period)
 		def _run():
 			t = 0.0
 			direction = 1
@@ -328,6 +340,7 @@ class Lights(LightsBase or object):
 	# ---------- weather wrapper ----------
 	def weather(self, condition: str):
 		"""Map simple condition keywords to effects."""
+		self._remember_mode("weather", condition=condition)
 		cond = (condition or "").lower()
 		if "sun" in cond or "clear" in cond:
 			self.set_color(255, 170, 0, 0) # warm
