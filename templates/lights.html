@@ -160,6 +160,24 @@
 		const white = document.getElementById('whiteSlider');
 		const bright = document.getElementById('brightSlider');
 
+		// Restore saved values
+		const savedHex = localStorage.getItem('lights.color') || '#ff0000';
+		const savedW = localStorage.getItem('lights.white');
+		const savedB = localStorage.getItem('lights.bright');
+
+		colorInput.value = savedHex;
+		swatch.style.background = savedHex;
+		if (savedW !== null) white.value = savedW;
+		if (savedB !== null) bright.value = savedB;
+
+		// Keep swatch & storage in sync while user picks
+		colorInput.addEventListener('input', () => {
+		swatch.style.background = colorInput.value;
+		localStorage.setItem('lights.color', colorInput.value);
+		});
+		white.addEventListener('input', () => localStorage.setItem('lights.white', white.value));
+		bright.addEventListener('input', () => localStorage.setItem('lights.bright', bright.value));
+
 		// mount the <input type="color"> inside the circle so taps land on it
 		if (colorInput.parentElement !== swatch){
 			swatch.innerHTML = '';
